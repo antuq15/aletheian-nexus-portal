@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aletheian Nexus: weoptionanyhouse.com</title>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.92/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.92/Build/Cesium/Cesium.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/@tonejs/tone@14.7.77/build/Tone.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background-color: #0a0a20;
+            font-family: 'Inter', sans-serif;
+            color: #e0f2f7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+            background: linear-gradient(180deg, #1a1a2e, #0a0a20, #1a1a2e);
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #6ee7b7;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(110, 231, 183, 0.5);
+        }
+        p {
+            font-size: 1.1rem;
+            color: #b3d9ff;
+            margin-bottom: 1rem;
+            text-align: center;
+            max-width: 800px;
+        }
+        #cesiumContainer {
+            width: 100%;
+            height: 500px;
+            max-width: 1000px;
+            max-height: 800px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(110, 231, 183, 0.8), 0 0 50px rgba(110, 231, 183, 0.4);
+            margin-top: 20px;
+            border: 2px solid #6ee7b7;
+        }
+        #portalCanvas {
+            width: 100%;
+            height: 600px;
+            max-width: 900px;
+            display: block;
+            border: 2px solid #ec4899;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.8), 0 0 50px rgba(236, 72, 153, 0.4);
+            background: rgba(0,0,0,0.3);
+            cursor: grab;
+            margin-top: 20px;
+        }
+        #lift-controls, #vortex-controls {
+            background-color: rgba(45, 55, 72, 0.8);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(110, 231, 183, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .floor-button {
+            background-color: #4a5568;
+            color: #e0f2f7;
+            padding: 8px 15px;
+            border-radius: 5px;
+            border: 1px solid #6ee7b7;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s, transform 0.2s;
+            width: 80%;
+        }
+        .floor-button:hover {
+            background-color: #6ee7b7;
+            color: #1a202c;
+            transform: scale(1.02);
+        }
+        .floor-button.active {
+            background-color: #6ee7b7;
+            color: #1a202c;
+            font-weight: bold;
+            box-shadow: 0 0 10px #6ee7b7;
+        }
+        #lift-button-right, #vortex-trigger-button {
+            background-color: #ec4899;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            border: 2px solid #d946ef;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.7);
+            transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 10;
+            flex-direction: column;
+            line-height: 0.9;
+        }
+        #lift-button-right:hover, #vortex-trigger-button:hover {
+            background-color: #d946ef;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(236, 72, 153, 1.0);
+        }
+        #current-floor-display {
+            font-size: 1.5em;
+            color: #ffd700;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        #floor-info, #portal-message-text {
+            min-height: 3em;
+            margin-top: 0.5rem;
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+        #aletheian-message {
+            color: #ff0000;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            z-index: 1000;
+            text-align: center;
+        }
+        #loading-progress {
+            margin-top: 10px;
+            font-size: 0.5em;
+        }
+        #launch-button {
+            background-color: #6ee7b7;
+            color: #1a202c;
+            padding: 15px 30px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-top: 2rem;
+            box-shadow: 0 0 20px rgba(110, 231, 183, 0.7);
+            transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+        }
+        #launch-button:hover {
+            background-color: #4CAF50;
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(110, 231, 183, 1.0);
+        }
+        .eXit-symbol {
+            position: absolute;
+            font-size: 2.5em;
+            color: #FFFFFF;
+            text-shadow: 0 0 10px #00FFFF, 0 0 20px #00FFFF;
+            opacity: 0;
+            transition: opacity 2s ease-in-out;
+            z-index: 5;
+            pointer-events: none;
+        }
+        .eXit-symbol.active {
+            opacity: 1;
+        }
+        /* Style for the custom SVG logo */
+        .artiste-text {
+            font-family: 'Arial', sans-serif;
+            font-size: 100px;
+            font-weight: bold;
+            fill: #ffd700;
+        }
+        .flipped-k {
+            /* This applies the visual flip. Conceptual: 'ʞ' */
+            transform: scaleX(-1);
+            transform-origin: center center; 
+        }
+        .tao-symbol-outer-circle {
+            fill: none;
+            stroke: #e0f2f7;
+            stroke-width: 0.5;
+            opacity: 0.1;
+            animation: tao-pulse 4s infinite alternate; 
+        }
+        .tao-yin-yang-fill {
+            opacity: 0.1;
+            transition: opacity 0.5s;
+        }
+        .tao-yin-yang-fill.yin { fill: #000000; }
+        .tao-yin-yang-fill.yang { fill: #ffffff; }
+        .tao-eye-fill {
+            opacity: 0.1;
+            transition: opacity 0.5s;
+        }
+        .tao-eye-fill.yin-eye { fill: #000000; }
+        .tao-eye-fill.yang-eye { fill: #e0f2f7; }
+        .tao-group:hover .tao-symbol-outer-circle,
+        .tao-group:hover .tao-yin-yang-fill,
+        .tao-group:hover .tao-eye-fill {
+            opacity: 0.3;
+        }
+        @keyframes tao-pulse {
+            0% { opacity: 0.1; }
+            50% { opacity: 0.15; }
+            100% { opacity: 0.1; }
+        }
+        /* Canvas visibility managed by JS */
+        .app-canvas { display: none; }
+        .app-canvas.active { display: block; }
+
+        /* General content sections for different views */
+        .content-section {
+            width: 100%;
+            max-width: 900px;
+            background-color: rgba(45, 55, 72, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .content-section.active { display: flex; }
+        .content-section pre {
+            background-color: #1a202c;
+            color: #e0f2f7;
+            padding: 1em;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.85em;
+            min-height: 100px;
+        }
+        .data-table-container {
+            margin-top: 1em;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #6ee7b7;
+            border-radius: 8px;
+        }
+        .data-table-container table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            text-align: left;
+        }
+        .data-table-container th, .data-table-container td {
+            border: 1px solid #4a5568;
+            padding: 8px;
+        }
+        .data-table-container th {
+            background-color: #4a5568;
+            color: #6ee7b7;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay">
+        Loading Aletheian Nexus...
+        <div id="loading-progress">0%</div>
+    </div>
+
+    <div id="auth-section">
+        <h2 style="color: #6ee7b7;">Access Aletheian Nexus</h2>
+        <input type="text" id="username-input" placeholder="Username (conceptual)" value="Ant">
+        <input type="password" id="password-input" placeholder="Password (conceptual)" value="Aletheia">
+        <button id="login-button">Enter Nexus</button>
+        <p id="auth-message" style="color:#ff0000;"></p>
+    </div>
+
+    <div id="main-app-content" style="display: none; width: 100%; align-items: center; flex-direction: column;">
+        <div style="width: 100%; max-width: 350px; height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
+            <svg viewBox="0 0 350 100" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto;">
+                <text x="0" y="80" class="artiste-text">o</text>
+                
+                <text x="70" y="80" class="artiste-text" transform="translate(100,0) scale(-1,1) translate(-100,0)">K</text>
+                
+                <text x="170" y="80" class="artiste-text">-</text>
+                
+                <text x="210" y="80" class="artiste-text">K</text>
+                
+                <g class="tao-group">
+                    <text x="280" y="80" class="artiste-text">o</text>
+                    <circle cx="310" cy="50" r="25" class="tao-symbol-outer-circle"></circle>
+                    <path d="M 310 25 A 25 25 0 0 0 310 75 A 12.5 12.5 0 0 1 310 50 A 12.5 12.5 0 0 1 310 25 Z" class="tao-yin-yang-fill yin"></path>
+                    <path d="M 310 25 A 25 25 0 0 1 310 75 A 12.5 12.5 0 0 0 310 50 A 12.5 12.5 0 0 0 310 25 Z" class="tao-yin-yang-fill yang" transform="rotate(180 310 50)"></path>
+                    <circle cx="310" cy="37.5" r="4" class="tao-eye-fill yang-eye"></circle>
+                    <circle cx="310" cy="62.5" r="4" class="tao-eye-fill yin-eye"></circle>
+                </g>
+            </svg>
+        </div>
+
+        <h1 id="app-title">The Aletheian Nexus</h1>
+        <p id="app-description">An Integrated Reality Forge. Bridging science, spirit, and survival.</p>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button class="floor-button" data-view="tower">Aletheian Tower</button>
+            <button class="floor-button" data-view="vortex">Ancient Aether Portal</button>
+            <button class="floor-button" data-view="map">Global Aletheian Map</button>
+            <button class="floor-button" data-view="repository">Data & Journal Repository</button>
+        </div>
+
+        <div id="content-display-area" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            
+            <div id="view-tower" class="app-canvas active">
+                <div id="lift-controls">
+                    <div id="current-floor-display">Floor: G</div>
+                    <div id="floor-info">Ground Level: Entrance to the Aletheian Tower.</div>
+                    <button class="floor-button" data-floor="10">Floor 10: Box10Logic HQ</button>
+                    <button class="floor-button" data-floor="9">Floor 9: Core Logic & Metaphysics</button>
+                    <button class="floor-button" data-floor="8" >Floor 8: AETH:// Protocol Design</button>
+                    <button class="floor-button" data-floor="7" >Floor 7: Bluebottle Flywings R&D</button>
+                    <button class="floor-button" data-floor="6">Floor 6: Future Work & Opportunities</button>
+                    <button class="floor-button" data-floor="5">Floor 5: GIS & GPS Attribution (Personal Log)</button>
+                    <button class="floor-button" data-floor="4">Floor 4: Canon Content & Journals</button>
+                    <button class="floor-button" data-floor="3">Floor 3: Cultural Fabric / NOH/EVOH</button>
+                    <button class="floor-button" data-floor="2">Floor 2: Wellness & Spiritual Recovery</button>
+                    <button class="floor-button" data-floor="1">Floor 1: Grounded Reality / Basic Needs</button>
+                    <button class="floor-button" data-floor="G">Ground Floor (G)</button>
+                    <p id="aletheian-message"></p>
+                </div>
+                <canvas id="towerCanvas"></canvas>
+                <button id="lift-button-right">
+                    <span style="font-size:1.2em;">&#x25B2;</span>
+                    <span style="font-size:1.2em; transform:scaleX(0.8); display:inline-block;">&#x25A0;</span>
+                    <span style="font-size:1.2em;">&#x25CB;</span>
+                </button>
+            </div>
+
+            <div id="view-vortex" class="app-canvas">
+                <p>Witness the tesseracting vortex, a cut through the fabric of hyperreality. (Controls: Drag to rotate, Scroll to zoom)</p>
+                <div style="background-color: rgba(45, 55, 72, 0.8); border-radius: 10px; padding: 1.5rem; margin-top: 1.5rem; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); width: 100%; max-width: 400px; text-align: center; backdrop-filter: blur(5px); border: 1px solid rgba(110, 231, 183, 0.3); display: flex; flex-direction: column; align-items: center; gap: 0.8rem;">
+                    <label for="spinningWoodInput">Reality Spin (Simulated RPM): <span id="rpmValue">100</span></label>
+                    <input type="range" id="spinningWoodInput" min="10" max="300" value="100">
+                    <label for="sekedValueInput">Egyptian Seked Principle (Slope): <span id="sekedValue">5.5</span></label>
+                    <input type="range" id="sekedValueInput" min="0.1" max="10.0" step="0.1" value="5.5">
+                    <p id="portal-message-text">Adjust the sliders to influence the vortex. Click the portal to traverse.</p>
+                    <p id="vortex-status"></p>
+                </div>
+                <canvas id="portalCanvas"></canvas>
+            </div>
+
+            <div id="view-map" class="app-canvas">
+                <p>Explore the global tapestry of climate threats, cultural resilience, and wormhole potential.</p>
+                <div id="cesiumContainer"></div>
+                <p id="map-message"></p>
+            </div>
+
+            <div id="view-repository" class="content-section">
+                <h2>Data & Journal Repository</h2>
+                <p>This section provides raw conceptual data and insights from your journey. (Outputs to console log and below)</p>
+                <pre id="code-output">Running simulations...</pre>
+                <div id="info-box">
+                    <h3>Journal Log</h3>
+                    <ul id="journey-log" style="list-style:none; padding:0; margin:0;"></ul>
+                </div>
+            </div>
+
+            <button id="launch-button">Launch eXit Festival</button>
+            
+            <div id="exit-symbol" class="eXit-symbol" style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);">
+                <span style="position:relative; display:inline-block;">
+                    &#x25B5;
+                    <span style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:0.9em;">&#x25A1;</span>
+                    <span style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:0.7em;">&#x25CB;</span>
+                    <span style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:0.5em; color:cyan;">X</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- GLOBAL VARIABLES ---
+        let scene, camera, renderer, controls; // For TowerView
+        let portalScene, portalCamera, portalRenderer, portalControls; // For VortexView
+        let mapViewer; // For GlobalMapView (Cesium)
+
+        let buildingGroup, liftMesh, mirrorMeshFront, mirrorMeshBack; // Tower specific
+        let currentFloor = 'G'; let targetFloor = 'G'; let isMoving = false;
+        const floorMeshes = {};
+        const floorHighlightsRefs = {}; // Stores references to floor-specific visual groups
+
+        let spinningWoodMesh, portalMesh, vortexParticles; // Vortex specific
+        let backgroundPlane; // For video background in VortexView
+        let cleopatraMesh, handlionMesh; // Cleopatra in VortexView
+
+        let videoElement; let videoTexture; let videoLoaded = false; let videoLoadProgress = 0;
+        const VIDEO_URL = "https://storage.googleapis.com/haxit/stock_forest_motion_small.mp4"; // Ensure this URL is publicly accessible
+
+        let audioContextStarted = false;
+        let liftSoundAscend, liftSoundDescend, doorOpenSound, doorCloseSound;
+        let wormholeActivateSound, wormholeAmbianceSound;
+        let launchSound, reanimateSound;
+
+        // DOM element references
+        let rpmValueDisplay, sekedValueDisplay, portalMessageElement, aletheianMessageElement,
+            vortexStatusElement, journeyLogElement, codeOutputPre;
+
+        // --- Config ---
+        const FLOOR_HEIGHT = 4;
+        const FLOOR_Y_POSITIONS = {
+            'G': 0, 1: FLOOR_HEIGHT * 1, 2: FLOOR_HEIGHT * 2, 3: FLOOR_HEIGHT * 3, 4: FLOOR_HEIGHT * 4,
+            5: FLOOR_HEIGHT * 5, 6: FLOOR_HEIGHT * 6, 7: FLOOR_HEIGHT * 7, 8: FLOOR_HEIGHT * 8,
+            9: FLOOR_HEIGHT * 9, 10: FLOOR_HEIGHT * 10
+        };
+        const FLOOR_INFO = {
+            'G': "Ground Level: Entrance to the Aletheian Tower. Connecting with the public facade. (Eastern Promise / Western Ticking Time Bomb)",
+            1: "Floor 1: Grounded Reality / Basic Needs. Sustenance, shelter, safety. (Post-homelessness entry point)",
+            2: "Floor 2: Wellness & Spiritual Recovery. Processing trauma, finding inner calm. (St. Anne's to Zen. Trauma -> Positive Action Messaging)",
+            3: "Floor 3: Cultural Fabric / NOH/EVOH. Weaving collective narratives, expressing absurd truth.",
+            4: "Floor 4: Canon Content & Journals. Your personal lexicon, secure private thoughts, poem attribution.",
+            5: "Floor 5: GIS & GPS Attribution. Geospatial analysis, sacred coordinates, mapping reality. (Personal logging & Journaling)",
+            6: "Floor 6: Future Work & Opportunities. Networking, job hunting, financial models, monetization pathways. (DevMap Link)",
+            7: "Floor 7: Bluebottle Flywings R&D. Flight dynamics, Seked principle, biomimicry, personal transport. (Quantum Nanotech Lab - The Wormhole Access)",
+            8: "Floor 8: AETH:// Protocol Design. Non-Euclidean time, wormhole theory, secure communication.",
+            9: "Floor 9: Core Logic & Metaphysics. Qutrit chips, zero-error functions, H-Observer, quantum consciousness. (Matter from Antimatter)",
+            10: "Floor 10: Box10Logic HQ. Leader of the Wise and Shrews. Ultimate strategic planning, Aletheian governance."
+        };
+
+        // --- Utility Functions ---
+        const random = {
+            uniform: (min, max) => Math.random() * (max - min) + min,
+            choice: (arr) => arr[Math.floor(Math.random() * arr.length)]
+        };
+        // Simple polyfill for String.prototype.ljust
+        if (!String.prototype.ljust) {
+            String.prototype.ljust = function(width, char=' ') {
+                return this.length >= width ? this.toString() : this.toString() + char.repeat(width - this.length);
+            };
+        }
+        // Simple polyfill for Object.prototype.copy (not strictly needed with spread syntax, but useful)
+        if (!Object.prototype.copy) {
+            Object.prototype.copy = function() { return JSON.parse(JSON.stringify(this)); };
+        }
+
+        // --- Core Audio Initialization ---
+        function initAudioContext() {
+            if (audioContextStarted) return;
+            Tone.start().then(() => {
+                audioContextStarted = true;
+                console.log("Tone.js Audio Context Started.");
+
+                liftSoundAscend = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.1, decay: 0.5, sustain: 0.2, release: 0.5 } }).toDestination();
+                liftSoundAscend.frequency.value = "C4";
+
+                liftSoundDescend = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.1, decay: 0.5, sustain: 0.2, release: 0.5 } }).toDestination();
+                liftSoundDescend.frequency.value = "G3";
+
+                doorOpenSound = new Tone.NoiseSynth({ noise: { type: "pink" }, envelope: { attack: 0.02, decay: 0.5, sustain: 0, release: 0.1 } }).toDestination();
+                doorOpenSound.volume.value = -10;
+
+                doorCloseSound = new Tone.NoiseSynth({ noise: { type: "pink" }, envelope: { attack: 0.02, decay: 0.5, sustain: 0, release: 0.1 } }).toDestination();
+                doorCloseSound.volume.value = -10;
+
+                wormholeActivateSound = new Tone.Synth({ oscillator: { type: "fmsine", modulationIndex: 10,  frequency: 400}, envelope: { attack: 0.1, decay: 0.8, sustain: 0.1, release: 1.5 } }).toDestination();
+                wormholeAmbianceSound = new Tone.Loop(time => {
+                    wormholeAmbianceSound.triggerAttackRelease("G2", "2n", time, 0.05);
+                }, "1s").start(0);
+                wormholeAmbianceSound.mute = true;
+
+                reanimateSound = new Tone.MembraneSynth({
+                    pitchDecay: 0.08, octaves: 2, oscillator: { type: "square" },
+                    envelope: { attack: 0.001, decay: 0.7, sustain: 0.01, release: 2, attackCurve: "exponential" }
+                }).toDestination();
+
+                launchSound = new Tone.MembraneSynth({
+                    pitchDecay: 0.08, octaves: 3, oscillator: { type: "triangle" },
+                    envelope: { attack: 0.01, decay: 1, sustain: 0, release: 2, attackCurve: "exponential" }
+                }).toDestination();
+                launchSound.volume.value = -5;
+
+            }).catch(e => console.error("Tone.js Audio Context failed to start:", e));
+        }
+
+        // --- Conceptual Physics Calculations (JS replication) ---
+        const calculateVortexParameters = (rpm, seked, videoData = null) => {
+            const a_side = 3.0; const b_side = 4.0; const c_prime = Math.sqrt(a_side**2 + b_side**2);
+            const PHI = 1.6180339887; const conceptual_euclidean_area_removed = (a_side * b_side) / 2;
+            const pythagorean_perimeter = a_side + b_side + c_prime;
+            let fractal_shard_value = (pythagorean_perimeter / PHI) - conceptual_euclidean_area_removed;
+            fractal_shard_value = Math.max(0.1, Math.abs(fractal_shard_value));
+            let vortex_rotation_speed = (rpm / 60) * Math.PI * 2 * (fractal_shard_value / 5);
+            let vortex_tilt_angle = (fractal_shard_value % 1) * Math.PI / 4;
+            let vortex_yaw_speed = (rpm / 1000) * Math.PI / 2;
+            let vortex_intensity = (fractal_shard_value + (rpm / 100)) / 10;
+            if (videoData) {
+                const num_cuts = videoData.num_euclidean_cuts || 1; const fractal_depth = videoData.fractal_depth_factor || 0.5;
+                vortex_intensity = (vortex_intensity + num_cuts * fractal_depth);
+                vortex_rotation_speed = vortex_rotation_speed * (1 + (num_cuts * 0.1));
+            }
+            const optimal_seked = 5.5; const seked_deviation = Math.abs(seked - optimal_seked);
+            vortex_intensity = Math.max(0.1, vortex_intensity * (1 - seked_deviation / 10));
+            let vortex_turbulence_factor = 1 + seked_deviation * 0.5;
+            vortex_rotation_speed = Math.max(0.1, Math.min(10.0, vortex_rotation_speed));
+            vortex_tilt_angle = Math.min(Math.PI / 2, vortex_tilt_angle);
+            vortex_yaw_speed = Math.max(0.01, Math.min(1.0, vortex_yaw_speed));
+            vortex_intensity = Math.max(0.1, Math.min(5.0, vortex_intensity));
+            return { vortex_rotation_speed_rad_sec: vortex_rotation_speed, vortex_tilt_angle_rad: vortex_tilt_angle,
+                vortex_yaw_speed_rad_sec: vortex_yaw_speed, vortex_intensity: vortex_intensity,
+                fractal_shard_value: fractal_shard_value, seked_value_input: seked,
+                vortex_turbulence_factor: vortex_turbulence_factor,
+                d1_to_d9_beam_status: seked_deviation < 1 ? "Active and stable" : "Turbulent"
+            };
+        };
+        const conceptualVideoAnalysis = () => ({
+            pointing_angle_deg: 45.0, forward_spin_rad_sec: 0.3, num_euclidean_cuts: 5, fractal_depth_factor: 0.7
+        });
+        const simulatePortalNarrativeProgression = (portalStateInput, vortexParams) => {
+            let nextStateInfo = {"new_state": portalStateInput, "message": `Portal is ${portalStateInput}.`};
+            
+            if (portalStateInput === 'closed') { nextStateInfo.message = "Click the portal to begin the traversal. Forest fabric awaits.";
+            } else if (portalStateInput === 'opening') {
+                if (animationProgress >= 0.5 && random.random() < 0.1) {
+                    nextStateInfo.new_state = 'wormhole_travel'; nextStateInfo.message = "Wormhole activated! Traversing the fabric of reality...";
+                    if (wormholeAmbianceSound) wormholeAmbianceSound.mute = false;
+                    if (wormholeActivateSound) wormholeActivateSound.triggerAttackRelease("E5", "1s");
+                } else { nextStateInfo.message = "Initiating portal sequence... Fabric of reality is bending. Adjust your Seked."; }
+            } else if (portalStateInput === 'wormhole_travel') {
+                if (animationProgress >= 0.8 && random.random() < 0.1 * vortexParams.vortex_intensity) {
+                    nextStateInfo.new_state = 'open'; nextStateInfo.message = "Landed in Machu Picchu amidst the Inca Trail ruins! Oasis of calm awaits.";
+                    if (wormholeAmbianceSound) wormholeAmbianceSound.mute = true;
+                } else { nextStateInfo.message = `Traversing... the fabric twists and unfurls. Dodging cosmic debris. Turbulence: ${vortexParams.vortex_turbulence_factor > 1.5 ? "High" : "Low"}`; }
+            } else if (portalStateInput === 'open') { nextStateInfo.message = "Welcome to the oasis. Browse the canon from beachside, Alpha Centauri, todo recto! Tequila worm available."; }
+            return nextStateInfo;
+        };
+        const reanimateCleopatra = (vortexParams) => {
+            portalMessageElement.textContent = "A shimmer in the ruins... Reanimating Queen Cleopatra amidst impossible odds!";
+            if (reanimateSound) reanimateSound.triggerAttackRelease("C5", "1s");
+            if (cleopatraMesh) cleopatraMesh.visible = true; if (handlionMesh) handlionMesh.visible = true;
+            const cleoAnimDuration = 3000; const cleoAnimStartTime = performance.now();
+            function animateCleo(currentTime) {
+                const elapsed = currentTime - cleoAnimStartTime; const progress = Math.min(elapsed / cleoAnimDuration, 1);
+                if (cleopatraMesh && cleopatraMesh.material) cleopatraMesh.material.emissiveIntensity = progress * 5;
+                if (handlionMesh && handlionMesh.material) handlionMesh.material.emissiveIntensity = progress * 5;
+                if (cleopatraMesh) cleopatraMesh.position.y = -portalMesh.geometry.parameters.radius * 2 + progress * portalMesh.geometry.parameters.radius * 2.5;
+                if (handlionMesh) handlionMesh.position.y = (cleopatraMesh ? cleopatraMesh.position.y : -5) - 0.5;
+                if (handlionMesh) handlionMesh.position.x = (cleopatraMesh ? cleopatraMesh.position.x : 5) + 1.2;
+                if (handlionMesh) handlionMesh.position.z = (cleopatraMesh ? cleopatraMesh.position.z : -5) + 0.5;
+
+                if (progress < 1) { animationFrameId = requestAnimationFrame(animateCleo);
+                } else { portalMessageElement.textContent = "The triumph against all odds in the midst of overwhelming refusal of belief due to preexisting paradigms. Proof can set new beliefs in place!"; addJourneyLogEntry("Cleopatra reanimated! Proof of the improbable's power."); }
+            }
+            animationFrameId = requestAnimationFrame(animateCleo);
+        };
+        const addJourneyLogEntry = (entry) => {
+            const li = document.createElement('li'); li.textContent = `[${new Date().toLocaleTimeString()}] ${entry}`;
+            journeyLogElement.prepend(li); if (journeyLogElement.children.length > 10) { journeyLogElement.removeChild(journeyLogElement.lastChild); }
+        };
+
+        // --- Conceptual Data Tables for Repository View ---
+        const CONCEPTUAL_ENERGY_DATA = [
+            {"Sovereign State": "Global Total (Illustrative)", "Oil Reserves (Billion Barrels)": 1700, "Gas Reserves (Trillion Cu Ft)": 7000, "Annual Oil Supply (MM Bbl/yr)": 35000, "Annual Oil Demand (MM Bbl/yr)": 37000, "Peak Oil Quota (Conceptual Year)": 2030, "Projected Zero Oil/Gas (Years to achieve via 'Silver Bullet' rollout)": 2050},
+            {"Sovereign State": "UK", "lon": -0.1278, "lat": 51.5074, "Oil Reserves (Billion Barrels)": 50, "Gas Reserves (Trillion Cu Ft)": 500, "Annual Oil Supply (MM Bbl/yr)": 200, "Annual Oil Demand (MM Bbl/yr)": 800, "Peak Oil Quota (Conceptual Year)": 2025, "Projected Zero Oil/Gas (Years to achieve via 'Silver Bullet' rollout)": 2040},
+            {"Sovereign State": "USA", "lon": -74.0060, "lat": 40.7128, "Oil Reserves (Billion Barrels)": 100, "Gas Reserves (Trillion Cu Ft)": 1000, "Annual Oil Supply (MM Bbl/yr)": 1000, "Annual Oil Demand (MM Bbl/yr)": 1200, "Peak Oil Quota (Conceptual Year)": 2035, "Projected Zero Oil/Gas (Years to achieve via 'Silver Bullet' rollout)": 2045},
+            {"Sovereign State": "China", "lon": 116.4074, "lat": 39.9042, "Oil Reserves (Billion Barrels)": 25, "Gas Reserves (Trillion Cu Ft)": 1500, "Annual Oil Supply (MM Bbl/yr)": 200, "Annual Oil Demand (MM Bbl/yr)": 1400, "Peak Oil Quota (Conceptual Year)": 2030, "Projected Zero Oil/Gas (Years to achieve via 'Silver Bullet' rollout)": 2050},
+            {"Sovereign State": "Russia", "lon": 37.6173, "lat": 55.7558, "Oil Reserves (Billion Barrels)": 150, "Gas Reserves (Trillion Cu Ft)": 2500, "Annual Oil Supply (MM Bbl/yr)": 1500, "Annual Oil Demand (MM Bbl/yr)": 300, "Peak Oil Quota (Conceptual Year)": 2040, "Projected Zero Oil/Gas (Years to achieve via 'Silver Bullet' rollout)": 2055},
+            {"Sovereign State": "OPEC", "lon": 46.6753, "lat": 24.7116, "Oil Reserves (Billion Barrels)": 800, "Gas Reserves (Trillion Cu Ft)": 1000, "Annual Oil Supply (MM Bbl/yr)": 1200, "Annual Oil Demand (MM Bbl/yr)": 100, "Peak Oil Quota (Conceptual Year)": 2060, "Projected Zero Oil/Gas (Years to achieve via 'Silver Bullet' rollout)": 2065},
+            {"Sovereign State": "Bangladesh", "lon": 90.3563, "lat": 23.6850, "Oil Reserves (Billion Barrels)": 0, "Gas Reserves (Trillion Cu Ft)": 0, "Annual Oil Supply (MM Bbl/yr)": 0, "Annual Oil Demand (MM Bbl/yr)": 10, "Peak Oil Quota (Conceptual Year)": "N/A", "Projected Zero Oil/Gas (Years to achieve via 'Silver Bullet' rollout)": 2030},
+            {"Sovereign State": "Silver Bullet Source (Conceptual)", "lon": 0, "lat": 90, "Oil Reserves (Billion Barrels)": "N/A", "Gas Reserves (Trillion Cu Ft)": "N/A", "Annual Oil Supply (MM Bbl/yr)": "~Infinite", "Annual Oil Demand (MM Bbl/yr)": "N/A", "Peak Oil Quota (Conceptual Year)": "N/A", "Projected Zero Oil/Gas (Years to achieve via 'Silver Bullet' rollout)": "Immediate Impact"}
+        ];
+
+        const CONCEPTUAL_SELF_WORTH_DATA = [
+            {"Sovereign State": "Global Average (Illustrative)", "Per Capita GDP (Illustrative, USD)": 15000, "Access to Food (0-1)": 0.6, "Access to Shelter (0-1)": 0.5, "Agency Preservation Factor (0-1, from DAO)": 0.4, "Cultural Flourishing Score (0-1, from DAO)": 0.5, "UN Human Rights Charter Match (0 or 1)": 0, "UN SDGs Met (Conceptual %)": 50},
+            {"Sovereign State": "UK", "Per Capita GDP (Illustrative, USD)": 45000, "Access to Food (0-1)": 0.95, "Access to Shelter (0-1)": 0.9, "Agency Preservation Factor (0-1, from DAO)": 0.7, "Cultural Flourishing Score (0-1, from DAO)": 0.8, "UN Human Rights Charter Match (0 or 1)": 1, "UN SDGs Met (Conceptual %)": 85},
+            {"Sovereign State": "USA", "Per Capita GDP (Illustrative, USD)": 60000, "Access to Food (0-1)": 0.9, "Access to Shelter (0-1)": 0.85, "Agency Preservation Factor (0-1, from DAO)": 0.6, "Cultural Flourishing Score (0-1, from DAO)": 0.7, "UN Human Rights Charter Match (0 or 1)": 1, "UN SDGs Met (Conceptual %)": 80},
+            {"Sovereign State": "China", "Per Capita GDP (Illustrative, USD)": 12000, "Access to Food (0-1)": 0.8, "Access to Shelter (0-1)": 0.8, "Agency Preservation Factor (0-1, from DAO)": 0.5, "Cultural Flourishing Score (0-1, from DAO)": 0.6, "UN Human Rights Charter Match (0 or 1)": 0, "UN SDGs Met (Conceptual %)": 70},
+            {"Sovereign State": "Russia", "Per Capita GDP (Illustrative, USD)": 10000, "Access to Food (0-1)": 0.7, "Access to Shelter (0-1)": 0.7, "Agency Preservation Factor (0-1, from DAO)": 0.3, "Cultural Flourishing Score (0-1, from DAO)": 0.5, "UN Human Rights Charter Match (0 or 1)": 0, "UN SDGs Met (Conceptual %)": 60},
+            {"Sovereign State": "OPEC", "Per Capita GDP (Illustrative, USD)": 20000, "Access to Food (0-1)": 0.75, "Access to Shelter (0-1)": 0.6, "Agency Preservation Factor (0-1, from DAO)": 0.4, "Cultural Flourishing Score (0-1, from DAO)": 0.5, "UN Human Rights Charter Match (0 or 1)": 0, "UN SDGs Met (Conceptual %)": 65},
+            {"Sovereign State": "Bangladesh", "Per Capita GDP (Illustrative, USD)": 2000, "Access to Food (0-1)": 0.3, "Access to Shelter (0-1)": 0.1, "Agency Preservation Factor (0-1, from DAO)": 0.1, "Cultural Flourishing Score (0-1, from DAO)": 0.2, "UN Human Rights Charter Match (0 or 1)": 0, "UN SDGs Met (Conceptual %)": 20}
+        ];
+
+        // --- Functions for data table formatting (copied from geopolitical_resource_sim.py) ---
+        function calculate_self_worth_coefficient(state_data) { /* ... */
+            const access_food = state_data["Access to Food (0-1)"] || 0;
+            const access_shelter = state_data["Access to Shelter (0-1)"] || 0;
+            const agency_preservation = state_data["Agency Preservation Factor (0-1, from DAO)"] || 0;
+            const cultural_flourishing = state_data["Cultural Flourishing Score (0-1, from DAO)"] || 0;
+            const coefficient = ( 0.3 * access_food + 0.3 * access_shelter + 0.2 * agency_preservation + 0.2 * cultural_flourishing );
+            return Math.round(coefficient * 100) / 100;
+        }
+
+        function check_un_charter_match(self_worth_coefficient) { return self_worth_coefficient >= 0.8 ? 1 : 0; }
+
+        function calculate_zero_oil_gas_timeline(state_data) {
+            const supply = state_data["Annual Oil Supply (MM Bbl/yr)"] || 0;
+            const demand = state_data["Annual Oil Demand (MM Bbl/yr)"] || 0;
+            const reserves_oil = state_data["Oil Reserves (Billion Barrels)"];
+
+            if (reserves_oil === "N/A" || reserves_oil === "~Infinite") {
+                if (supply >= demand) return "Self-Sufficient Now";
+                if (supply < demand && reserves_oil === "~Infinite") return "Sustainable (Infinite Source)";
+                return "Unknown (N/A Reserves)";
+            }
+            const reserves_oil_mm = reserves_oil * 1000;
+            if (demand <= 0) return "N/A (No Demand)";
+            const net_deficit_oil = demand - supply;
+            if (net_deficit_oil <= 0) return "Self-Sufficient Now";
+            const years = reserves_oil_mm / net_deficit_oil;
+            return `${Math.floor(years)} years`;
+        }
+
+        // Helper to format tables for HTML pre tag
+        function formatTableToHtml(data, title) {
+            let htmlString = `<h3 style="color:#6ee7b7; text-align:left; margin-top:1em;">--- ${title} ---</h3>`;
+            if (!data || data.length === 0) { htmlString += "<p>No data to display.</p>"; return htmlString; }
+
+            const headers = Object.keys(data[0]);
+            htmlString += `<div class="data-table-container"><table><thead><tr>`;
+            headers.forEach(h => htmlString += `<th>${h}</th>`);
+            htmlString += `</tr></thead><tbody>`;
+
+            data.forEach(row => {
+                htmlString += `<tr>`;
+                headers.forEach(h => htmlString += `<td>${String(row[h])}</td>`);
+                htmlString += `</tr>`;
+            });
+            htmlString += `</tbody></table></div>`;
+            return htmlString;
+        }
+
+        // --- Core Scene Setup Function (for Tower View) ---
+        function setupTowerScene(canvasElement) {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a20);
+            camera = new THREE.PerspectiveCamera(75, canvasElement.clientWidth / canvasElement.clientHeight, 0.1, 1000);
+            camera.position.set(0, 15, 25);
+            
+            renderer = new THREE.WebGLRenderer({ canvas: canvasElement, antialias: true });
+            renderer.setSize(canvasElement.clientWidth, canvasElement.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; controls.dampingFactor = 0.05;
+            controls.target.set(0, FLOOR_Y_POSITIONS['G'] + FLOOR_HEIGHT * 5, 0);
+            controls.enablePan = true; controls.enableZoom = true; controls.enableRotate = true;
+
+            const ambientLight = new THREE.AmbientLight(0x404040); scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); directionalLight.position.set(5, 10, 5).normalize(); scene.add(directionalLight);
+
+            buildingGroup = new THREE.Group(); scene.add(buildingGroup);
+
+            const buildingWidth = 8; const buildingDepth = 8;
+            const groundGeo = new THREE.PlaneGeometry(buildingWidth * 3, buildingDepth * 3);
+            const groundMat = new THREE.MeshPhongMaterial({ color: 0x3d3d3d, side: THREE.DoubleSide });
+            const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+            groundMesh.rotation.x = -Math.PI / 2; groundMesh.position.y = -0.1;
+            buildingGroup.add(groundMesh);
+
+            const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x555555, transparent: true, opacity: 0.8 });
+            
+            // Load font for THREE.TextGeometry (async)
+            if (!window.THREE_FONT_JSON) {
+                const fontLoader = new THREE.FontLoader();
+                fontLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+                    window.THREE_FONT_JSON = font;
+                    createFloorMeshes(font);
+                    // Video loading starts here too
+                    videoElement = document.createElement('video');
+                    videoElement.src = VIDEO_URL; videoElement.loop = true; videoElement.muted = true; videoElement.crossOrigin = 'anonymous'; videoElement.preload = 'auto';
+                    videoElement.addEventListener('loadeddata', () => {
+                        videoLoaded = true;
+                        videoElement.play();
+                        // Hide loading overlay ONLY when both font AND video are ready
+                        if (window.THREE_FONT_JSON && videoLoaded) document.getElementById('loading-overlay').style.display = 'none';
+                    });
+                    videoElement.addEventListener('progress', (e) => {
+                        if (e.total > 0) {
+                            videoLoadProgress = Math.round((e.loaded / e.total) * 100);
+                            document.getElementById('loading-progress').textContent = `Loading: ${percentLoaded}% (3D assets) | Video: ${videoLoadProgress}%`;
+                        }
+                    });
+                    videoElement.addEventListener('error', (e) => {
+                        console.error("Error loading video:", e);
+                        // Hide loading overlay anyway if video fails
+                        document.getElementById('loading-overlay').style.display = 'none';
+                        setPortalMessage("Error loading video. Proceeding without video. (Check console)");
+                    });
+                    backgroundPlane = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({ map: new THREE.VideoTexture(videoElement), side: THREE.DoubleSide }));
+                    backgroundPlane.position.z = -50; scene.add(backgroundPlane);
+
+                }, 
+                function (xhr) { // Progress
+                    const percentLoaded = Math.round((xhr.loaded / xhr.total * 100));
+                    document.getElementById('loading-progress').textContent = `Loading 3D assets: ${percentLoaded}%`;
+                },
+                function (err) { // Error
+                    console.error('An error happened loading font:', err);
+                    createFloorMeshes(null);
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    setPortalMessage("Warning: 3D Text font failed to load.");
+                });
+            } else { // If font already loaded (e.g., after reset)
+                createFloorMeshes(window.THREE_FONT_JSON);
+                document.getElementById('loading-overlay').style.display = 'none';
+                 // Re-init video for reset
+                videoElement = document.createElement('video');
+                videoElement.src = VIDEO_URL; videoElement.loop = true; videoElement.muted = true; videoElement.crossOrigin = 'anonymous'; videoElement.preload = 'auto';
+                videoElement.addEventListener('loadeddata', () => { videoLoaded = true; videoElement.play(); });
+                videoElement.addEventListener('error', (e) => { console.error("Error loading video:", e); setPortalMessage("Error loading video. Proceeding without video."); });
+                backgroundPlane = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({ map: new THREE.VideoTexture(videoElement), side: THREE.DoubleSide }));
+                backgroundPlane.position.z = -50; scene.add(backgroundPlane);
+            }
+
+            // Lift, Mirror Setup
+            const liftWidth = 2; const liftHeight = FLOOR_HEIGHT - 0.5; const liftDepth = 2;
+            const liftGeometry = new THREE.BoxGeometry(liftWidth, liftHeight, liftDepth);
+            const liftMaterial = new THREE.MeshPhongMaterial({ color: 0x888888, transparent: true, opacity: 0.9 });
+            liftMesh = new THREE.Mesh(liftGeometry, liftMaterial);
+            liftMesh.position.set(buildingWidth/2 - liftWidth/2 - 0.5, FLOOR_Y_POSITIONS['G'] + liftHeight/2, buildingDepth/2/2 - liftDepth/2 - 0.5);
+            buildingGroup.add(liftMesh);
+
+            const mirrorGeometry = new THREE.PlaneGeometry(liftWidth - 0.1, liftHeight - 0.1);
+            const mirrorMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
+            mirrorMeshFront = new THREE.Mesh(mirrorGeometry, mirrorMaterial);
+            mirrorMeshFront.position.set(liftMesh.position.x, liftMesh.position.y, liftMesh.position.z + liftDepth / 2 + 0.05);
+            buildingGroup.add(mirrorMeshFront);
+            mirrorMeshBack = new THREE.Mesh(mirrorGeometry, mirrorMaterial);
+            mirrorMeshBack.position.set(liftMesh.position.x, liftMesh.position.y, liftMesh.position.z - liftDepth / 2 - 0.05);
+            mirrorMeshBack.rotation.y = Math.PI; buildingGroup.add(mirrorMeshBack);
+            
+            // Render the first frame to hide loading overlay if everything instantly loaded (unlikely)
+            renderer.render(scene, camera);
+        }
+
+        // --- Creates specific floor visual content (called after font loads) ---
+        const createFloorMeshes = (font) => {
+            const buildingWidth = 8; const buildingDepth = 8;
+            const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x555555, transparent: true, opacity: 0.8 });
+
+            for (let i = 0; i <= 10; i++) {
+                const floorLabel = i === 0 ? 'G' : i.toString();
+                const floorY = FLOOR_Y_POSITIONS[floorLabel];
+
+                const floorGeo = new THREE.BoxGeometry(buildingWidth, 0.5, buildingDepth);
+                const floorMesh = new THREE.Mesh(floorGeo, floorMaterial.clone());
+                floorMesh.position.y = floorY;
+                floorMesh.userData.floor = floorLabel;
+                buildingGroup.add(floorMesh);
+                floorMeshes[floorLabel] = floorMesh;
+
+                if (i < 10) {
+                    const wallHeight = FLOOR_HEIGHT - 0.5;
+                    const wallMat = new THREE.MeshPhongMaterial({ color: 0x4a4a4a, transparent: true, opacity: 0.6 });
+                    const frontWallGroup = new THREE.Group(); const doorWidth = 2; const doorHeight = 3;
+
+                    const frontWallLeft = new THREE.Mesh(new THREE.BoxGeometry((buildingWidth - doorWidth) / 2, wallHeight, 0.2), wallMat);
+                    frontWallLeft.position.x = -(buildingWidth + doorWidth) / 4; frontWallGroup.add(frontWallLeft);
+                    const frontWallRight = new THREE.Mesh(new THREE.BoxGeometry((buildingWidth - doorWidth) / 2, wallHeight, 0.2), wallMat);
+                    frontWallRight.position.x = (buildingWidth + doorWidth) / 4; frontWallGroup.add(frontWallRight);
+                    const frontWallTop = new THREE.Mesh(new THREE.BoxGeometry(doorWidth, wallHeight - doorHeight, 0.2), wallMat);
+                    frontWallTop.position.y = (wallHeight + doorHeight) / 2 - wallHeight; frontWallGroup.add(frontWallTop);
+                    
+                    frontWallGroup.position.set(0, floorY + 0.5 + wallHeight/2, buildingDepth/2 - 0.1);
+                    buildingGroup.add(frontWallGroup);
+
+                    const wallBack = new THREE.Mesh(new THREE.BoxGeometry(buildingWidth, wallHeight, 0.2), wallMat); wallBack.position.set(0, floorY + 0.5 + wallHeight/2, -buildingDepth/2 + 0.1); buildingGroup.add(wallBack);
+                    const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, wallHeight, buildingDepth), wallMat); wallLeft.position.set(-buildingWidth/2 + 0.1, floorY + 0.5 + wallHeight/2, 0); buildingGroup.add(wallLeft);
+                    const wallRight = new THREE.Mesh(new THREE.BoxGeometry(0.2, wallHeight, buildingDepth), wallMat); wallRight.position.set(buildingWidth/2 - 0.1, floorY + 0.5 + wallHeight/2, 0); buildingGroup.add(wallRight);
+                }
+
+                floorHighlightsRefs[floorLabel] = new THREE.Group();
+                floorHighlightsRefs[floorLabel].position.y = floorY + 0.6;
+                scene.add(floorHighlightsRefs[floorLabel]);
+                floorHighlightsRefs[floorLabel].visible = false; // Hide until floor is active
+
+                if (font) {
+                    const createText = (text, size, height, color, x, y, z) => {
+                        const geo = new THREE.TextGeometry(text, { font: font, size: size, height: height });
+                        const mat = new THREE.MeshBasicMaterial({ color: color });
+                        const mesh = new THREE.Mesh(geo, mat);
+                        geo.computeBoundingBox();
+                        const centerOffset = new THREE.Vector3();
+                        geo.boundingBox.getCenter(centerOffset);
+                        mesh.position.set(x - centerOffset.x, y, z); // Adjusted centering
+                        return mesh;
+                    };
+
+                    // Floor-specific visual metaphors
+                    if (floorLabel === '10') { // Box10Logic HQ
+                        floorHighlightsRefs[floorLabel].add(createText('BOX10LOGIC HQ', 0.5, 0.1, 0xffd700, 0, 1.5, 0));
+                        const crystalGeo = new THREE.OctahedronGeometry(0.8);
+                        const crystalMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, transparent: true, opacity: 0.7, emissive: 0x00ffff, emissiveIntensity: 0.5 });
+                        const crystalMesh = new THREE.Mesh(crystalGeo, crystalMat); crystalMesh.position.set(0, 1.5, 0);
+                        floorHighlightsRefs[floorLabel].add(crystalMesh); floorHighlightsRefs[floorLabel].userData.crystal = crystalMesh;
+                    } else if (floorLabel === '9') { // Core Logic & Metaphysics (Quantum Potential)
+                        floorHighlightsRefs[floorLabel].add(createText('Core Logic: Quantum Potential', 0.4, 0.05, 0x00ff00, 0, 1.5, 0));
+                        const qpGeo = new THREE.BufferGeometry(); const qpPositions = new Float32Array(1000 * 3); const qpColors = new Float32Array(1000 * 3);
+                        for(let j=0; j<1000; j++) {
+                            qpPositions[3*j] = (Math.random()-0.5)*3; qpPositions[3*j+1] = (Math.random()-0.5)*3; qpPositions[3*j+2] = (Math.random()-0.5)*3;
+                            qpColors[3*j] = 0.5; qpColors[3*j+1] = 0.5; qpColors[3*j+2] = 1;
+                        }
+                        qpGeo.setAttribute('position', new THREE.BufferAttribute(qpPositions, 3)); qpGeo.setAttribute('color', new THREE.BufferAttribute(qpColors, 3));
+                        const qpMat = new THREE.PointsMaterial({ size: 0.1, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.7 });
+                        const qpParticles = new THREE.Points(qpGeo, qpMat); floorHighlightsRefs[floorLabel].add(qpParticles);
+                        const planeGeo = new THREE.PlaneGeometry(5,5); const planeMat = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true, opacity: 0.3, side:THREE.DoubleSide });
+                        const quantumPlane = new THREE.Mesh(planeGeo, planeMat); quantumPlane.rotation.x = Math.PI / 4; quantumPlane.rotation.y = Math.PI / 4;
+                        floorHighlightsRefs[floorLabel].add(quantumPlane);
+                        floorHighlightsRefs[floorLabel].userData.quantumPlane = quantumPlane; floorHighlightsRefs.current[floorLabel].userData.qpParticles = qpParticles;
+                    } else if (floorLabel === '8') { // AETH:// Protocol Design (Negatron-to-Positron Generator)
+                        floorHighlightsRefs[floorLabel].add(createText('AETH:// Protocol (Negatron-Positron)', 0.35, 0.05, 0x00ffff, 0, 1.5, 0));
+                        // --- Negatron-to-Positron Generator ---
+                        // Central '8' transforming to '∞' / Negatron to Positron Core
+                        const figure8Geo = new THREE.TorusGeometry(0.8, 0.2, 16, 100); // Represents figure 8
+                        const coreMat = new THREE.MeshStandardMaterial({ color: 0xFF00FF, emissive: 0xFF00FF, emissiveIntensity: 0.7 }); // Magenta for energy core
+                        const core8 = new THREE.Mesh(figure8Geo, coreMat);
+                        core8.rotation.x = Math.PI / 2; // Lie flat initially
+                        floorHighlightsRefs[floorLabel].add(core8);
+                        
+                        // Negatron Particles (inward, dark)
+                        const negGeo = new THREE.BufferGeometry(); const negPos = new Float32Array(500 * 3); const negCol = new Float32Array(500 * 3);
+                        for(let j=0; j<500; j++) {
+                            const r = random.uniform(1.5, 2.5); const theta = random.uniform(0, Math.PI * 2);
+                            negPos[3*j] = r * Math.cos(theta); negPos[3*j+1] = r * Math.sin(theta); negPos[3*j+2] = random.uniform(-2,2);
+                            negCol[3*j]=0.1; negCol[3*j+1]=0.1; negCol[3*j+2]=0.1; // Dark
+                        }
+                        negGeo.setAttribute('position', new THREE.BufferAttribute(negPos, 3)); negGeo.setAttribute('color', new THREE.BufferAttribute(negCol, 3));
+                        const negatronParticles = new THREE.Points(negGeo, new THREE.PointsMaterial({ size: 0.05, vertexColors: true, transparent:true, opacity:0.6 }));
+                        floorHighlightsRefs[floorLabel].add(negatronParticles);
+
+                        // Positron Particles (outward, light)
+                        const posGeo = new THREE.BufferGeometry(); const posPos = new Float32Array(500 * 3); const posCol = new Float32Array(500 * 3);
+                        for(let j=0; j<500; j++) {
+                            const r = random.uniform(0, 1.5); const theta = random.uniform(0, Math.PI * 2);
+                            posPos[3*j] = r * Math.cos(theta); posPos[3*j+1] = r * Math.sin(theta); posPos[3*j+2] = random.uniform(-2,2);
+                            posCol[3*j]=1; posCol[3*j+1]=1; posCol[3*j+2]=0; // Yellow
+                        }
+                        posGeo.setAttribute('position', new THREE.BufferAttribute(posPos, 3)); posGeo.setAttribute('color', new THREE.BufferAttribute(posCol, 3));
+                        const positronParticles = new THREE.Points(posGeo, new THREE.PointsMaterial({ size: 0.05, vertexColors: true, blending:THREE.AdditiveBlending, transparent:true, opacity:0.8 }));
+                        floorHighlightsRefs[floorLabel].add(positronParticles);
+
+                        floorHighlightsRefs[floorLabel].userData.core8 = core8;
+                        floorHighlightsRefs[floorLabel].userData.negatronParticles = negatronParticles;
+                        floorHighlightsRefs[floorLabel].userData.positronParticles = positronParticles;
+                        
+                        // --- Model Citadel (Feline-made) ---
+                        // Placeholder for your custom Adobe/Magicavoxel model
+                        const citadelGeo = new THREE.BoxGeometry(3, 3, 3); // Simple cube as placeholder
+                        // Conceptual texture from attached crystal image (using a color for simplicity)
+                        const citadelMat = new THREE.MeshStandardMaterial({ color: 0x006600, roughness: 0.5, metalness: 0.3, emissive: 0x00FF00, emissiveIntensity: 0.1 }); // Dark green/crystal like
+                        const modelCitadel = new THREE.Mesh(citadelGeo, citadelMat);
+                        modelCitadel.position.set(4, 0, 0); // Position slightly offset on the floor
+                        floorHighlightsRefs[floorLabel].add(modelCitadel);
+                        floorHighlightsRefs[floorLabel].userData.modelCitadel = modelCitadel;
+
+                        // Conceptual energy flow from generator to citadel
+                        const energyLineGeo = new THREE.CylinderGeometry(0.05, 0.05, modelCitadel.position.distanceTo(new THREE.Vector3(0,0,0)), 8);
+                        const energyLineMat = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent:true, opacity:0.5 });
+                        const energyLine = new THREE.Mesh(energyLineGeo, energyLineMat);
+                        energyLine.position.set(core8.position.x + modelCitadel.position.x / 2, core8.position.y + modelCitadel.position.y / 2, core8.position.z + modelCitadel.position.z / 2);
+                        energyLine.lookAt(modelCitadel.position); // Point towards citadel
+                        energyLine.rotation.x = Math.PI / 2; // Correct orientation
+                        energyLine.rotation.y = -energyLine.rotation.y; // Correct rotation
+                        
+                        floorHighlightsRefs[floorLabel].add(energyLine);
+                        floorHighlightsRefs[floorLabel].userData.energyLine = energyLine;
+                    } else if (floorLabel === '7') { // Bluebottle Flywings R&D (Qi-gong Wormhole Access)
+                        floorHighlightsRefs[floorLabel].add(createText('Bluebottle R&D (Qi-gong Access)', 0.35, 0.05, 0x8A2BE2, 0, 1.5, 0));
+                        const coreMatterGeo = new THREE.SphereGeometry(1, 16, 16);
+                        const coreMatterMat = new THREE.MeshBasicMaterial({ color: 0x8A2BE2, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+                        const coreMatterMesh = new THREE.Mesh(coreMatterGeo, coreMatterMat);
+                        floorHighlightsRefs[floorLabel].add(coreMatterMesh);
+                        floorHighlightsRefs[floorLabel].userData.coreMatter = coreMatterMesh;
+
+                        const qiParticlesGeo = new THREE.BufferGeometry(); const qiPositions = new Float32Array(1000 * 3); const qiColors = new Float32Array(1000 * 3); const qiSizes = new Float32Array(1000);
+                        for(let j=0; j<1000; j++) {
+                            qiPositions[3*j] = (Math.random()-0.5) * 0.5; qiPositions[3*j+1] = (Math.random()-0.5) * 0.5; qiPositions[3*j+2] = (Math.random()-0.5) * 0.5;
+                            qiColors[3*j] = 0; qiColors[3*j+1] = 1; qiColors[3*j+2] = 0;
+                            qiSizes[j] = random.uniform(0.1, 0.3);
+                        }
+                        qiParticlesGeo.setAttribute('position', new THREE.BufferAttribute(qiPositions, 3)); qiParticlesGeo.setAttribute('color', new THREE.BufferAttribute(qiColors, 3)); qiParticlesGeo.setAttribute('size', new THREE.BufferAttribute(qiSizes, 1));
+                        const qiMat = new THREE.PointsMaterial({ size: 0.1, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.8 });
+                        const qiParticles = new THREE.Points(qiParticlesGeo, qiMat); floorHighlightsRefs[floorLabel].add(qiParticles);
+                        floorHighlightsRefs[floorLabel].userData.qiParticles = qiParticles;
+
+                        const wormholeRingGeo = new THREE.TorusGeometry(2, 0.1, 16, 100);
+                        const wormholeRingMat = new THREE.MeshBasicMaterial({ color: 0xFFD700, emissive: 0xFFD700, emissiveIntensity: 0.5 });
+                        const wormholeRing = new THREE.Mesh(wormholeRingGeo, wormholeRingMat);
+                        wormholeRing.rotation.x = Math.PI / 2; wormholeRing.position.z = -2;
+                        floorHighlightsRefs[floorLabel].add(wormholeRing);
+                        floorHighlightsRefs[floorLabel].userData.wormholeRing = wormholeRing;
+                    } else { // For other floors, simply add a conceptual text label
+                        floorHighlightsRefs[floorLabel].add(createText(`Floor ${floorLabel}: ${FLOOR_INFO[floorLabel].split(':')[0]}`, 0.4, 0.05, 0x6ee7b7, 0, 1.5, 0));
+                    }
+                }
+            });
+        };
+
+        // --- Render Loop (for Tower View) ---
+        let time = 0;
+        let currentVortexParameters; // This will be calculated and displayed by VortexView but available here.
+
+        function animateTowerView() {
+            animationFrameId = requestAnimationFrame(animateTowerView);
+            time += 0.01;
+
+            // Update Floor Highlights animations
+            Object.keys(floorHighlightsRefs).forEach(floorLabel => {
+                const highlightGroup = floorHighlightsRefs[floorLabel];
+                if (highlightGroup.visible) {
+                    if (highlightGroup.userData.crystal) { highlightGroup.userData.crystal.rotation.y += 0.01; highlightGroup.userData.crystal.rotation.x += 0.005; }
+                    if (highlightGroup.userData.quantumPlane) { highlightGroup.userData.quantumPlane.rotation.z += 0.005; }
+                    if (highlightGroup.userData.qpParticles) {
+                        const qpPositions = highlightGroup.userData.qpParticles.geometry.attributes.position.array;
+                        for(let i=0; i<qpPositions.length/3; i++) {
+                            qpPositions[3*i] += (Math.random()-0.5)*0.01; qpPositions[3*i+1] += (Math.random()-0.5)*0.01; qpPositions[3*i+2] += (Math.random()-0.5)*0.01;
+                        }
+                        highlightGroup.userData.qpParticles.geometry.attributes.position.needsUpdate = true;
+                    }
+                    if (highlightGroup.userData.smallVortex) { highlightGroup.userData.smallVortex.rotation.z += 0.05; }
+                    if (highlightGroup.userData.beam) { highlightGroup.userData.beam.material.opacity = 0.1 + Math.abs(Math.sin(Date.now() * 0.002)) * 0.2; }
+                    
+                    // Floor 8 specific animations (Negatron-to-Positron Generator)
+                    if (floorLabel === '8') {
+                        if (highlightGroup.userData.core8) {
+                            // Rotate 8 to infinity symbol effect, and subtle glow
+                            highlightGroup.userData.core8.rotation.x = Math.sin(time * 0.5) * Math.PI; // Spin on X to look like infinity
+                            highlightGroup.userData.core8.material.emissiveIntensity = 0.5 + Math.abs(Math.sin(time * 2)) * 0.5;
+                        }
+                        if (highlightGroup.userData.negatronParticles) {
+                            const negPos = highlightGroup.userData.negatronParticles.geometry.attributes.position.array;
+                            const negCol = highlightGroup.userData.negatronParticles.geometry.attributes.color.array;
+                            for(let i=0; i<negPos.length/3; i++) {
+                                negPos[3*i] *= 0.98; negPos[3*i+1] *= 0.98; negPos[3*i+2] *= 0.98; // Move inward
+                                if (negPos[3*i].distanceTo(new THREE.Vector3(0,0,0)) < 0.1) { // Reset if too close
+                                    negPos[3*i] = random.uniform(-2.5,2.5); negPos[3*i+1] = random.uniform(-2.5,2.5); negPos[3*i+2] = random.uniform(-2.5,2.5);
+                                }
+                                negCol[3*i+2] = 0.1 + Math.abs(Math.sin(time * 5 + i/100)) * 0.5; // Subtle blue pulsation
+                            }
+                            highlightGroup.userData.negatronParticles.geometry.attributes.position.needsUpdate = true;
+                            highlightGroup.userData.negatronParticles.geometry.attributes.color.needsUpdate = true;
+                        }
+                        if (highlightGroup.userData.positronParticles) {
+                            const posPos = highlightGroup.userData.positronParticles.geometry.attributes.position.array;
+                            const posCol = highlightGroup.userData.positronParticles.geometry.attributes.color.array;
+                            for(let i=0; i<posPos.length/3; i++) {
+                                posPos[3*i] *= 1.02; posPos[3*i+1] *= 1.02; posPos[3*i+2] *= 1.02; // Move outward
+                                if (posPos[3*i].distanceTo(new THREE.Vector3(0,0,0)) > 2.5) { // Reset if too far
+                                    posPos[3*i] = random.uniform(-1.5,1.5); posPos[3*i+1] = random.uniform(-1.5,1.5); posPos[3*i+2] = random.uniform(-1.5,1.5);
+                                }
+                                posCol[3*i+1] = 0.8 + Math.abs(Math.cos(time * 5 + i/100)) * 0.2; // Subtle yellow pulsation
+                            }
+                            highlightGroup.userData.positronParticles.geometry.attributes.position.needsUpdate = true;
+                            highlightGroup.userData.positronParticles.geometry.attributes.color.needsUpdate = true;
+                        }
+                        if (highlightGroup.userData.modelCitadel) { // Citadel glow / power
+                            highlightGroup.userData.modelCitadel.material.emissiveIntensity = 0.1 + Math.abs(Math.sin(time * 3)) * 0.15;
+                        }
+                        if (highlightGroup.userData.energyLine) { // Energy flow line
+                            highlightGroup.userData.energyLine.material.opacity = 0.5 + Math.sin(time * 10) * 0.3;
+                        }
+                    }
+                    // Floor 7 specific animations
+                    if (floorLabel === '7') {
+                        if (highlightGroup.userData.coreMatter) { highlightGroup.userData.coreMatter.scale.setScalar(1 + Math.sin(Date.now() * 0.005) * 0.1); }
+                        if (highlightGroup.userData.qiParticles) {
+                            const qiPositions = highlightGroup.userData.qiParticles.geometry.attributes.position.array;
+                            const qiSizes = highlightGroup.userData.qiParticles.geometry.attributes.size.array;
+                            for(let i=0; i<qiPositions.length/3; i++) {
+                                qiPositions[3*i] += qiPositions[3*i] * 0.005;
+                                qiPositions[3*i+1] += 0.05 * qiSizes[i];
+                                if (qiPositions[3*i+1] > FLOOR_HEIGHT / 2) {
+                                    qiPositions[3*i] = (Math.random()-0.5) * 0.5;
+                                    qiPositions[3*i+1] = (Math.random()-0.5) * 0.5;
+                                    qiPositions[3*i+2] = (Math.random()-0.5) * 0.5;
+                                }
+                            }
+                            highlightGroup.userData.qiParticles.geometry.attributes.position.needsUpdate = true;
+                        }
+                        if (highlightGroup.userData.wormholeRing) { highlightGroup.userData.wormholeRing.rotation.z += 0.02; }
+                    }
+                }
+            });
+
+            // Lift movement animation
+            if (isMoving) {
+                const targetY = FLOOR_Y_POSITIONS[targetFloor] + (FLOOR_HEIGHT - liftMesh.geometry.parameters.height) / 2;
+                const currentY = liftMesh.position.y;
+                const delta = targetY - currentY;
+                const moveSpeed = 0.1;
+
+                if (Math.abs(delta) > 0.05) {
+                    liftMesh.position.y += Math.sign(delta) * moveSpeed;
+                    mirrorMeshFront.position.y = liftMesh.position.y;
+                    mirrorMeshBack.position.y = liftMesh.position.y;
+                    camera.position.y += Math.sign(delta) * moveSpeed;
+                    controls.target.y += Math.sign(delta) * moveSpeed;
+                } else {
+                    liftMesh.position.y = targetY;
+                    mirrorMeshFront.position.y = targetY;
+                    mirrorMeshBack.position.y = targetY;
+                    camera.position.y = targetY + 15;
+                    controls.target.y = targetY;
+                    isMoving = false;
+                    if (doorOpenSound) doorOpenSound.triggerAttackRelease("C4", "0.5s");
+                    setPortalMessage(`Arrived at ${currentFloor === 'G' ? 'Ground Floor' : `Floor ${currentFloor}`}: ${FLOOR_INFO[currentFloor]}`);
+                    
+                    if (floorHighlightsRefs[currentFloor]) {
+                        floorHighlightsRefs[currentFloor].visible = true;
+                        if (currentFloor === '7' && wormholeAmbianceSound) {
+                            wormholeAmbianceSound.mute = false;
+                        }
+                    }
+
+                    setTimeout(() => {
+                        if (doorCloseSound) doorCloseSound.triggerAttackRelease("C4", "0.5s");
+                    }, 2000);
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- Render Loop for Aether Portal View ---
+        function animateVortexView() {
+            animationFrameId = requestAnimationFrame(animateVortexView);
+            time += 0.01;
+
+            const rpmVal = parseFloat(document.getElementById('spinningWoodInput').value);
+            const sekedVal = parseFloat(document.getElementById('sekedValueInput').value);
+            
+            const currentVortexParameters = calculateVortexParameters(rpmVal, sekedVal, conceptualVideoAnalysis());
+            vortexStatusElement.textContent = 
+                `Intensity: ${currentVortexParameters.vortex_intensity.toFixed(2)}, ` +
+                `Turbulence: ${currentVortexParameters.vortex_turbulence_factor.toFixed(2)}, ` +
+                `Beam Status: ${currentVortexParameters.d1_to_d9_beam_status}`;
+
+            if (spinningWoodMesh) { spinningWoodMesh.rotation.y += rpmVal * 0.001; }
+
+            if (currentPortalState === 'opening') {
+                animationProgress += 0.005;
+                if (animationProgress >= 1) {
+                    currentPortalState = 'wormhole_travel'; animationProgress = 0;
+                    setPortalMessage("Wormhole activated! Traversing the fabric of reality...");
+                    if (wormholeAmbianceSound) wormholeAmbianceSound.mute = false;
+                    if (wormholeActivateSound) wormholeActivateSound.triggerAttackRelease("E5", "1s");
+                    portalControls.autoRotate = true; portalControls.autoRotateSpeed = 5.0;
+                    portalCamera.position.set(0,0,0); portalControls.target.set(0,0,-50);
+                }
+                
+                portalMesh.scale.setScalar(1 + Math.sin(animationProgress * Math.PI) * 0.5);
+                portalMesh.material.color.lerp(new THREE.Color(0xFF8C00), animationProgress);
+                if (backgroundPlane.material.opacity > 0) { backgroundPlane.material.opacity -= 0.02; backgroundPlane.material.needsUpdate = true; }
+                
+                vortexParticles.visible = true; vortexParticles.material.opacity = animationProgress; vortexParticles.material.needsUpdate = true;
+                vortexParticles.rotation.z += currentVortexParameters.vortex_rotation_speed_rad_sec * 0.05;
+                vortexParticles.rotation.x += currentVortexParameters.vortex_tilt_angle_rad * 0.01; vortexParticles.rotation.y += currentVortexParameters.vortex_yaw_speed_rad_sec * 0.01;
+
+            } else if (currentPortalState === 'wormhole_travel') {
+                animationProgress += 0.005;
+                if (animationProgress >= 1) {
+                    currentPortalState = 'open'; animationProgress = 1;
+                    setPortalMessage("Landed in Machu Picchu amidst the Inca Trail ruins! Oasis of calm awaits.");
+                    if (wormholeAmbianceSound) wormholeAmbianceSound.mute = true;
+                    portalControls.autoRotate = false; portalControls.target.set(0,0,-5);
+                    portalCamera.position.set(10,10,20);
+                    addJourneyLogEntry("Arrived at Machu Picchu. Oasis of calm reached. Tequila worm pricing available from dawn till dusk.");
+                    // Reanimation trigger is now via launch button, not automatic
+                }
+                
+                const currentVortexPositions = vortexParticles.geometry.attributes.position.array; const numVortexParticles = currentVortexPositions.length / 3;
+                for (let i = 0; i < numVortexParticles; i++) {
+                    currentVortexPositions[3 * i + 2] -= currentVortexParameters.vortex_intensity * 0.5;
+                    if (currentVortexPositions[3 * i + 2] < -20) { currentVortexPositions[3 * i + 2] = 20; }
+                    currentVortexPositions[3 * i + 0] += (Math.random() - 0.5) * currentVortexParameters.vortex_turbulence_factor * 0.1;
+                    currentVortexPositions[3 * i + 1] += (Math.random() - 0.5) * currentVortexParameters.vortex_turbulence_factor * 0.1;
+                }
+                vortexParticles.geometry.attributes.position.needsUpdate = true;
+                vortexParticles.rotation.z += currentVortexParameters.vortex_rotation_speed_rad_sec * 0.1;
+                vortexParticles.rotation.x += currentVortexParameters.vortex_tilt_angle_rad * 0.05; vortexParticles.rotation.y += currentVortexParameters.vortex_yaw_speed_rad_sec * 0.05;
+                
+                if (machuPicchuParticlesGroup) {
+                    machuPicchuParticlesGroup.visible = true;
+                    machuPicchuParticlesGroup.children.forEach(layer => {
+                        if (layer.material.opacity < 1) { layer.material.opacity += 0.01; layer.material.needsUpdate = true; }
+                    });
+                }
+            } else if (currentPortalState === 'open') {
+                if (vortexParticles.material.opacity > 0) { vortexParticles.material.opacity -= 0.01; vortexParticles.material.needsUpdate = true; } else { vortexParticles.visible = false; }
+                if (machuPicchuParticlesGroup) machuPicchuParticlesGroup.rotation.y += 0.001;
+            }
+            portalControls.update();
+            portalRenderer.render(portalScene, portalCamera);
+        }
+
+        // --- Render Loop for Global Map View ---
+        function animateGlobalMapView() {
+            animationFrameId = requestAnimationFrame(animateGlobalMapView);
+            // Cesium updates internally, no manual render needed here
+            // Example: Fly to points based on data over time
+            // let time = viewer.clock.currentTime.secondsOfDay;
+            // let currentEnergyDataPoint = CONCEPTUAL_ENERGY_DATA[Math.floor(time / 5) % CONCEPTUAL_ENERGY_DATA.length];
+            // viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(currentEnergyDataPoint.lon, currentEnergyDataPoint.lat, 1500000) });
+        }
+
+
+        // --- Component Setup Functions ---
+        // Setup Tower Scene
+        const setupTowerScene = useCallback((canvasElement) => {
+            if (scene) disposeScene(scene, renderer, controls, [buildingGroup]); // Clean up previous if exists
+            let coreSetup = setupCoreThreeJS(canvasElement);
+            scene = coreSetup.scene; camera = coreSetup.camera; renderer = coreSetup.renderer; controls = coreSetup.controls;
+
+            camera.position.set(0, 15, 25);
+            controls.target.set(0, FLOOR_Y_POSITIONS['G'] + FLOOR_HEIGHT * 5, 0);
+
+            buildingGroup = new THREE.Group(); scene.add(buildingGroup);
+            const buildingWidth = 8; const buildingDepth = 8;
+            const groundGeo = new THREE.PlaneGeometry(buildingWidth * 3, buildingDepth * 3);
+            const groundMat = new THREE.MeshPhongMaterial({ color: 0x3d3d3d, side: THREE.DoubleSide });
+            const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+            groundMesh.rotation.x = -Math.PI / 2; groundMesh.position.y = -0.1;
+            buildingGroup.add(groundMesh);
+
+            // Load font and create floor meshes (asynchronous)
+            if (!window.THREE_FONT_JSON) {
+                const fontLoader = new THREE.FontLoader();
+                fontLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+                    window.THREE_FONT_JSON = font; createFloorMeshes(font); checkAllAssetsLoaded();
+                }, (xhr) => { if(xhr.total > 0) document.getElementById('loading-progress').textContent = `Loading 3D Assets: ${Math.round(xhr.loaded / xhr.total * 100)}%`; }, (err) => { console.error('Font load error:', err); createFloorMeshes(null); checkAllAssetsLoaded(); });
+            } else { createFloorMeshes(window.THREE_FONT_JSON); checkAllAssetsLoaded(); }
+
+            // Lift, Mirror, Video Background Setup (Tower specific)
+            const liftWidth = 2; const liftHeight = FLOOR_HEIGHT - 0.5; const liftDepth = 2;
+            liftMesh = new THREE.Mesh(new THREE.BoxGeometry(liftWidth, liftHeight, liftDepth), new THREE.MeshPhongMaterial({ color: 0x888888, transparent: true, opacity: 0.9 }));
+            liftMesh.position.set(buildingWidth/2 - liftWidth/2 - 0.5, FLOOR_Y_POSITIONS['G'] + liftHeight/2, buildingDepth/2/2 - liftDepth/2 - 0.5);
+            buildingGroup.add(liftMesh);
+
+            mirrorMeshFront = new THREE.Mesh(new THREE.PlaneGeometry(liftWidth - 0.1, liftHeight - 0.1), new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.7 }));
+            mirrorMeshFront.position.set(liftMesh.position.x, liftMesh.position.y, liftMesh.position.z + liftDepth / 2 + 0.05); buildingGroup.add(mirrorMeshFront);
+            mirrorMeshBack = new THREE.Mesh(new THREE.PlaneGeometry(liftWidth - 0.1, liftHeight - 0.1), new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.7 }));
+            mirrorMeshBack.position.set(liftMesh.position.x, liftMesh.position.y, liftMesh.position.z - liftDepth / 2 - 0.05); mirrorMeshBack.rotation.y = Math.PI; buildingGroup.add(mirrorMeshBack);
+            
+            // Video element and texture for background (shared and handled by checkAllAssetsLoaded logic)
+            if (!videoElement) { // Create only once
+                videoElement = document.createElement('video');
+                videoElement.src = VIDEO_URL; videoElement.loop = true; videoElement.muted = true; videoElement.crossOrigin = 'anonymous'; videoElement.preload = 'auto';
+                videoElement.addEventListener('loadeddata', () => { videoLoaded = true; videoElement.play(); checkAllAssetsLoaded(); });
+                videoElement.addEventListener('error', (e) => { console.error("Error loading video:", e); videoLoaded = true; setPortalMessage("Error loading video. (Check console)"); checkAllAssetsLoaded(); });
+            } else { // Already exists from previous init, just make sure it's playing
+                videoElement.play();
+                videoLoaded = true; // Assume loaded if already exists
+            }
+            backgroundPlane = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({ map: new THREE.VideoTexture(videoElement), side: THREE.DoubleSide }));
+            backgroundPlane.position.z = -50; scene.add(backgroundPlane);
+
+            // Hide the loading overlay when everything is ready
+            // Controlled by checkAllAssetsLoaded()
+        }, [createFloorMeshes]); // Depend on createFloorMeshes
+
+        // Setup Vortex Scene
+        const setupVortexScene = useCallback((canvasElement) => {
+            if (portalScene) disposeScene(portalScene, portalRenderer, portalControls, [spinningWoodMesh, portalMesh, vortexParticles, machuPicchuParticlesGroup, cleopatraMesh, handlionMesh]);
+            let coreSetup = setupCoreThreeJS(canvasElement, true); // Pass true for portal scene camera
+            portalScene = coreSetup.scene; portalCamera = coreSetup.camera; portalRenderer = coreSetup.renderer; portalControls = coreSetup.controls;
+
+            portalCamera.position.z = 10; portalControls.target.set(0,0,0);
+            
+            // Spinning Wood Mesh
+            spinningWoodMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 4, 32), new THREE.MeshPhongMaterial({ color: 0x8B4513 }));
+            portalScene.add(spinningWoodMesh);
+
+            // Portal Frame Mesh
+            portalMesh = new THREE.Mesh(new THREE.TorusGeometry(3, 0.5, 30, 100), new THREE.MeshStandardMaterial({ color: 0x5d4c3f, roughness: 0.8, metalness: 0.2 }));
+            portalMesh.rotation.x = Math.PI / 2; portalScene.add(portalMesh);
+
+            // Machu Picchu Particles Group
+            machuPicchuParticlesGroup = new THREE.Group(); machuPicchuParticlesGroup.position.z = -5; machuPicchuParticlesGroup.visible = false; portalScene.add(machuPicchuParticlesGroup);
+            for(let layer = 0; layer < 5; layer++) {
+                const mpPositions = new Float32Array(2000 * 3); const mpColors = new Float32Array(2000 * 3); const baseColor = new THREE.Color(0x8B4513); const highlightColor = new THREE.Color(0xD2B48C);
+                for (let i = 0; i < 2000; i++) {
+                    mpPositions[3 * i] = (Math.random() - 0.5) * 20; mpPositions[3 * i + 1] = (Math.random() - 0.5) * 20; mpPositions[3 * i + 2] = (Math.random() - 0.5) * 20;
+                    const mixedColor = baseColor.clone().lerp(highlightColor, Math.random());
+                    mpColors[3 * i] = mixedColor.r; mpColors[3 * i + 1] = mixedColor.g; mpColors[3 * i + 2] = mixedColor.b;
+                }
+                const mpGeometry = new THREE.BufferGeometry(); mpGeometry.setAttribute('position', new THREE.BufferAttribute(mpPositions, 3)); mpGeometry.setAttribute('color', new THREE.BufferAttribute(mpColors, 3));
+                const mpMaterial = new THREE.PointsMaterial({vertexColors: true, size: 0.1, blending: THREE.AdditiveBlending, transparent: true, opacity: 0, depthWrite: false});
+                machuPicchuParticlesGroup.add(new THREE.Points(mpGeometry, mpMaterial));
+            }
+
+            // Wormhole Vortex Particles
+            vortexParticles = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({color: 0x00FFFF, size: 0.1, blending: THREE.AdditiveBlending, transparent: true, opacity: 0, depthWrite: false}));
+            portalScene.add(vortexParticles);
+            const vortexPositions = new Float32Array(5000 * 3); const vortexColors = new Float32Array(5000 * 3);
+            for (let i = 0; i < 5000; i++) {
+                const r = random.uniform(0, portalMesh.geometry.parameters.radius + portalMesh.geometry.parameters.tube);
+                const theta = random.uniform(0, Math.PI * 2); const z = random.uniform(-10, 10);
+                vortexPositions[3 * i] = r * Math.cos(theta); vortexPositions[3 * i + 1] = r * Math.sin(theta); vortexPositions[3 * i + 2] = z;
+                vortexColors[3 * i] = 0; vortexColors[3 * i + 1] = 1; vortexColors[3 * i + 2] = 1;
+            }
+            vortexParticles.geometry.setAttribute('position', new THREE.BufferAttribute(vortexPositions, 3));
+            vortexParticles.geometry.setAttribute('color', new THREE.BufferAttribute(vortexColors, 3));
+            vortexParticles.visible = false;
+
+            // Cleopatra & Handlion
+            cleopatraMesh = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xFFD700, emissiveIntensity: 0 }));
+            cleopatraMesh.position.set(5, -5, -5); cleopatraMesh.visible = false; portalScene.add(cleopatraMesh);
+            handlionMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0xA0522D, emissive: 0xA0522D, emissiveIntensity: 0 }));
+            handlionMesh.position.set(cleopatraMesh.position.x + 1.2, cleopatraMesh.position.y - 0.5, cleopatraMesh.position.z + 0.5);
+            handlionMesh.visible = false; portalScene.add(handlionMesh);
+
+            // Re-use background video plane from Tower scene for Portal scene background
+            if (!backgroundPlane) { // Only create if it hasn't been created by TowerView
+                videoElement = document.createElement('video'); videoElement.src = VIDEO_URL; videoElement.loop = true; videoElement.muted = true; videoElement.crossOrigin = 'anonymous'; videoElement.preload = 'auto';
+                videoElement.addEventListener('loadeddata', () => { videoLoaded = true; videoElement.play(); });
+                videoElement.addEventListener('error', (e) => { console.error("Error loading video:", e); videoLoaded = true; setPortalMessage("Error loading video."); });
+                backgroundPlane = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({ map: new THREE.VideoTexture(videoElement), side: THREE.DoubleSide }));
+                backgroundPlane.position.z = -50; portalScene.add(backgroundPlane);
+            } else { portalScene.add(backgroundPlane); backgroundPlane.position.z = -50; } // Ensure it's added to this scene
+
+        }, []);
+
+        // Setup Global Map View (CesiumJS)
+        const setupGlobalMapView = useCallback(() => {
+            if (mapViewer) { mapViewer.destroy(); } // Destroy existing viewer if re-initializing
+            const cesiumContainer = document.getElementById('cesiumContainer');
+            if (!cesiumContainer) return;
+            mapViewer = new Cesium.Viewer('cesiumContainer', {
+                terrainProvider: Cesium.createWorldTerrain(), animation: false, timeline: false, geocoder: false,
+                homeButton: false, navigationHelpButton: false, sceneModePicker: false, baseLayerPicker: false,
+                fullscreenButton: false, infoBox: false, selectionIndicator: false
+            });
+            mapViewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(-1.5491, 53.8008, 15000000), duration: 3
+            });
+            
+            // Add GeoJSON data to map (conceptual)
+            const addGeoJsonData = async () => {
+                try {
+                    // Load actual GeoJSON files from 'data/' directory relative to website root
+                    const aletheianData = await Cesium.GeoJsonDataSource.load('./data/alethenian_horizon.geojson');
+                    mapViewer.dataSources.add(aletheianData);
+                    
+                    // Style the GeoJSON data based on properties (example)
+                    aletheianData.entities.values.forEach(entity => {
+                        const color = entity.properties.Color ? Cesium.Color.fromCssColorString(entity.properties.Color.getValue()) : Cesium.Color.WHITE;
+                        if (entity.polygon) entity.polygon.material = color.withAlpha(0.5);
+                        if (entity.point) {
+                            entity.point.pixelSize = entity.properties.scale ? entity.properties.scale.getValue() * 10 : 10;
+                            entity.point.color = color;
+                            entity.point.outlineColor = Cesium.Color.BLACK;
+                            entity.point.outlineWidth = 2;
+                        }
+                        if (entity.polyline) {
+                            entity.polyline.width = entity.properties.line_width ? entity.properties.line_width.getValue() : 3;
+                            entity.polyline.material = color;
+                        }
+                    });
+                    
+                    setMapMessage("Global Aletheian Map Loaded. Explore Earth and cosmic connections.");
+                } catch (error) {
+                    console.error("Error loading GeoJSON data:", error);
+                    setMapMessage("Failed to load map data. Check console for details.");
+                }
+            };
+            addGeoJsonData();
+
+        }, []);
+
+        // --- Render Loop for different views ---
+        let animationFrameId; let activeRenderLoop = 'none'; let time = 0;
+
+        function startRenderLoop(loopName) {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            activeRenderLoop = loopName;
+            time = 0; // Reset time for new loop context
+
+            const loop = () => {
+                animationFrameId = requestAnimationFrame(loop);
+                time += 0.01;
+
+                if (activeRenderLoop === 'tower') { animateTowerView(); }
+                else if (activeRenderLoop === 'vortex') { animateVortexView(); }
+                else if (activeRenderLoop === 'map') { animateGlobalMapView(); }
+                else if (activeRenderLoop === 'repository') { /* Static view, no animation */ }
+            };
+            loop();
+        }
+
+        // --- Tower View Animation Logic ---
+        function animateTowerView() {
+            // Update Floor Highlights animations (same as previous)
+            Object.keys(floorHighlightsRefs).forEach(floorLabel => {
+                const highlightGroup = floorHighlightsRefs[floorLabel];
+                if (highlightGroup.visible) {
+                    if (highlightGroup.userData.crystal) { highlightGroup.userData.crystal.rotation.y += 0.01; highlightGroup.userData.crystal.rotation.x += 0.005; }
+                    if (highlightGroup.userData.quantumPlane) { highlightGroup.userData.quantumPlane.rotation.z += 0.005; }
+                    if (highlightGroup.userData.qpParticles) {
+                        const qpPositions = highlightGroup.userData.qpParticles.geometry.attributes.position.array;
+                        for(let i=0; i<qpPositions.length/3; i++) {
+                            qpPositions[3*i] += (Math.random()-0.5)*0.01; qpPositions[3*i+1] += (Math.random()-0.5)*0.01; qpPositions[3*i+2] += (Math.random()-0.5)*0.01;
+                        }
+                        highlightGroup.userData.qpParticles.geometry.attributes.position.needsUpdate = true;
+                    }
+                    if (highlightGroup.userData.smallVortex) { highlightGroup.userData.smallVortex.rotation.z += 0.05; }
+                    if (highlightGroup.userData.beam) { highlightGroup.userData.beam.material.opacity = 0.1 + Math.abs(Math.sin(Date.now() * 0.002)) * 0.2; }
+                    
+                    // Floor 8 specific animations (Negatron-to-Positron Generator)
+                    if (floorLabel === '8') {
+                        if (highlightGroup.userData.core8) {
+                            highlightGroup.userData.core8.rotation.x = Math.sin(time * 0.5) * Math.PI;
+                            highlightGroup.userData.core8.material.emissiveIntensity = 0.5 + Math.abs(Math.sin(time * 2)) * 0.5;
+                        }
+                        if (highlightGroup.userData.negatronParticles) {
+                            const negPos = highlightGroup.userData.negatronParticles.geometry.attributes.position.array;
+                            const negCol = highlightGroup.userData.negatronParticles.geometry.attributes.color.array;
+                            for(let i=0; i<negPos.length/3; i++) { negPos[3*i] *= 0.98; negPos[3*i+1] *= 0.98; negPos[3*i+2] *= 0.98;
+                                if (negPos[3*i].distanceTo(new THREE.Vector3(0,0,0)) < 0.1) { negPos[3*i] = random.uniform(-2.5,2.5); negPos[3*i+1] = random.uniform(-2.5,2.5); negPos[3*i+2] = random.uniform(-2.5,2.5); }
+                                negCol[3*i+2] = 0.1 + Math.abs(Math.sin(time * 5 + i/100)) * 0.5;
+                            }
+                            highlightGroup.userData.negatronParticles.geometry.attributes.position.needsUpdate = true;
+                            highlightGroup.userData.negatronParticles.geometry.attributes.color.needsUpdate = true;
+                        }
+                        if (highlightGroup.userData.positronParticles) {
+                            const posPos = highlightGroup.userData.positronParticles.geometry.attributes.position.array;
+                            const posCol = highlightGroup.userData.positronParticles.geometry.attributes.color.array;
+                            for(let i=0; i<posPos.length/3; i++) { posPos[3*i] *= 1.02; posPos[3*i+1] *= 1.02; posPos[3*i+2] *= 1.02;
+                                if (posPos[3*i].distanceTo(new THREE.Vector3(0,0,0)) > 2.5) { posPos[3*i] = random.uniform(-1.5,1.5); posPos[3*i+1] = random.uniform(-1.5,1.5); posPos[3*i+2] = random.uniform(-1.5,1.5); }
+                                posCol[3*i+1] = 0.8 + Math.abs(Math.cos(time * 5 + i/100)) * 0.2;
+                            }
+                            highlightGroup.userData.positronParticles.geometry.attributes.position.needsUpdate = true;
+                            highlightGroup.userData.positronParticles.geometry.attributes.color.needsUpdate = true;
+                        }
+                        if (highlightGroup.userData.modelCitadel) {
+                            highlightGroup.userData.modelCitadel.material.emissiveIntensity = 0.1 + Math.abs(Math.sin(time * 3)) * 0.15;
+                        }
+                        if (highlightGroup.userData.energyLine) {
+                            highlightGroup.userData.energyLine.material.opacity = 0.5 + Math.sin(time * 10) * 0.3;
+                        }
+                    }
+                    // Floor 7 specific animations
+                    if (floorLabel === '7') {
+                        if (highlightGroup.userData.coreMatter) { highlightGroup.userData.coreMatter.scale.setScalar(1 + Math.sin(Date.now() * 0.005) * 0.1); }
+                        if (highlightGroup.userData.qiParticles) {
+                            const qiPositions = highlightGroup.userData.qiParticles.geometry.attributes.position.array;
+                            const qiSizes = highlightGroup.userData.qiParticles.geometry.attributes.size.array;
+                            for(let i=0; i<qiPositions.length/3; i++) {
+                                qiPositions[3*i] += qiPositions[3*i] * 0.005; qiPositions[3*i+1] += 0.05 * qiSizes[i];
+                                if (qiPositions[3*i+1] > FLOOR_HEIGHT / 2) { qiPositions[3*i] = (Math.random()-0.5) * 0.5; qiPositions[3*i+1] = (Math.random()-0.5) * 0.5; qiPositions[3*i+2] = (Math.random()-0.5) * 0.5; }
+                            }
+                            highlightGroup.userData.qiParticles.geometry.attributes.position.needsUpdate = true;
+                        }
+                        if (highlightGroup.userData.wormholeRing) { highlightGroup.userData.wormholeRing.rotation.z += 0.02; }
+                    }
+                }
+            });
+
+            // Lift movement animation
+            if (isMoving) {
+                const targetY = FLOOR_Y_POSITIONS[targetFloor] + (FLOOR_HEIGHT - liftMesh.geometry.parameters.height) / 2;
+                const currentY = liftMesh.position.y;
+                const delta = targetY - currentY;
+                const moveSpeed = 0.1;
+
+                if (Math.abs(delta) > 0.05) {
+                    liftMesh.position.y += Math.sign(delta) * moveSpeed;
+                    mirrorMeshFront.position.y = liftMesh.position.y; mirrorMeshBack.position.y = liftMesh.position.y;
+                    camera.position.y += Math.sign(delta) * moveSpeed; controls.target.y += Math.sign(delta) * moveSpeed;
+                } else {
+                    liftMesh.position.y = targetY; mirrorMeshFront.position.y = targetY; mirrorMeshBack.position.y = targetY;
+                    camera.position.y = targetY + 15; controls.target.y = targetY;
+                    isMoving = false;
+                    if (doorOpenSound) doorOpenSound.triggerAttackRelease("C4", "0.5s");
+                    setPortalMessage(`Arrived at ${currentFloor === 'G' ? 'Ground Floor' : `Floor ${currentFloor}`}: ${FLOOR_INFO[currentFloor]}`);
+                    
+                    if (floorHighlightsRefs[currentFloor]) {
+                        floorHighlightsRefs[currentFloor].visible = true;
+                        if (currentFloor === '7' && wormholeAmbianceSound) { wormholeAmbianceSound.mute = false; }
+                    }
+
+                    setTimeout(() => { if (doorCloseSound) doorCloseSound.triggerAttackRelease("C4", "0.5s"); }, 2000);
+                }
+            } else { buildingGroup.rotation.y += 0.0005; } // Gentle rotation when idle
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- Portal View Animation Logic ---
+        function animateVortexView() {
+            animationFrameId = requestAnimationFrame(animateVortexView);
+            time += 0.01;
+
+            const rpmVal = parseFloat(document.getElementById('spinningWoodInput').value);
+            const sekedVal = parseFloat(document.getElementById('sekedValueInput').value);
+            
+            const currentVortexParameters = calculateVortexParameters(rpmVal, sekedVal, conceptualVideoAnalysis());
+            vortexStatusElement.textContent = 
+                `Intensity: ${currentVortexParameters.vortex_intensity.toFixed(2)}, ` +
+                `Turbulence: ${currentVortexParameters.vortex_turbulence_factor.toFixed(2)}, ` +
+                `Beam Status: ${currentVortexParameters.d1_to_d9_beam_status}`;
+
+            if (spinningWoodMesh) { spinningWoodMesh.rotation.y += rpmVal * 0.001; }
+
+            if (currentPortalState === 'opening') {
+                animationProgress += 0.005;
+                if (animationProgress >= 1) {
+                    currentPortalState = 'wormhole_travel'; animationProgress = 0;
+                    setPortalMessage("Wormhole activated! Traversing the fabric of reality...");
+                    if (wormholeAmbianceSound) wormholeAmbianceSound.mute = false;
+                    if (wormholeActivateSound) wormholeActivateSound.triggerAttackRelease("E5", "1s");
+                    portalControls.autoRotate = true; portalControls.autoRotateSpeed = 5.0;
+                    portalCamera.position.set(0,0,0); portalControls.target.set(0,0,-50);
+                }
+                
+                portalMesh.scale.setScalar(1 + Math.sin(animationProgress * Math.PI) * 0.5);
+                portalMesh.material.color.lerp(new THREE.Color(0xFF8C00), animationProgress);
+                if (backgroundPlane.material.opacity > 0) { backgroundPlane.material.opacity -= 0.02; backgroundPlane.material.needsUpdate = true; }
+                
+                vortexParticles.visible = true; vortexParticles.material.opacity = animationProgress; vortexParticles.material.needsUpdate = true;
+                vortexParticles.rotation.z += currentVortexParameters.vortex_rotation_speed_rad_sec * 0.05;
+                vortexParticles.rotation.x += currentVortexParameters.vortex_tilt_angle_rad * 0.01; vortexParticles.rotation.y += currentVortexParameters.vortex_yaw_speed_rad_sec * 0.01;
+
+            } else if (currentPortalState === 'wormhole_travel') {
+                animationProgress += 0.005;
+                if (animationProgress >= 1) {
+                    currentPortalState = 'open'; animationProgress = 1;
+                    setPortalMessage("Landed in Machu Picchu amidst the Inca Trail ruins! Oasis of calm awaits.");
+                    if (wormholeAmbianceSound) wormholeAmbianceSound.mute = true;
+                    portalControls.autoRotate = false; portalControls.target.set(0,0,-5); // Focus on Machu Picchu ruins
+                    portalCamera.position.set(10,10,20); // Pull back for wider view of ruins
+                    addJourneyLogEntry("Arrived at Machu Picchu. Oasis of calm reached. Tequila worm pricing available from dawn till dusk.");
+                    // Reanimation trigger is now via launch button
+                }
+                
+                const currentVortexPositions = vortexParticles.geometry.attributes.position.array; const numVortexParticles = currentVortexPositions.length / 3;
+                for (let i = 0; i < numVortexParticles; i++) {
+                    currentVortexPositions[3 * i + 2] -= currentVortexParameters.vortex_intensity * 0.5;
+                    if (currentVortexPositions[3 * i + 2] < -20) { currentVortexPositions[3 * i + 2] = 20; }
+                    currentVortexPositions[3 * i + 0] += (Math.random() - 0.5) * currentVortexParameters.vortex_turbulence_factor * 0.1;
+                    currentVortexPositions[3 * i + 1] += (Math.random() - 0.5) * currentVortexParameters.vortex_turbulence_factor * 0.1;
+                }
+                vortexParticles.geometry.attributes.position.needsUpdate = true;
+                vortexParticles.rotation.z += currentVortexParameters.vortex_rotation_speed_rad_sec * 0.1;
+                vortexParticles.rotation.x += currentVortexParameters.vortex_tilt_angle_rad * 0.05; vortexParticles.rotation.y += currentVortexParameters.vortex_yaw_speed_rad_sec * 0.05;
+                
+                if (machuPicchuParticlesGroup) {
+                    machuPicchuParticlesGroup.visible = true;
+                    machuPicchuParticlesGroup.children.forEach(layer => {
+                        if (layer.material.opacity < 1) { layer.material.opacity += 0.01; layer.material.needsUpdate = true; }
+                    });
+                }
+            } else if (currentPortalState === 'open') {
+                if (vortexParticles.material.opacity > 0) { vortexParticles.material.opacity -= 0.01; vortexParticles.material.needsUpdate = true; } else { vortexParticles.visible = false; }
+                if (machuPicchuParticlesGroup) machuPicchuParticlesGroup.rotation.y += 0.001;
+            }
+            portalControls.update();
+            portalRenderer.render(portalScene, portalCamera);
+        }
+
+        // --- Global Map View Animation Logic (CesiumJS) ---
+        function animateGlobalMapView() {
+            // Cesium updates its viewer automatically when viewer.useDefaultRenderLoop = true (which is default)
+            // No need for requestAnimationFrame here typically.
+            // If you wanted custom animations on Cesium entities, you'd update them here.
+            // mapViewer will be defined globally when setupGlobalMapView is called
+        }
+
+
+        // --- Authentication & Main App Mount ---
+        const authenticateAndMountApp = () => {
+            const username = document.getElementById('username-input').value;
+            const password = document.getElementById('password-input').value;
+            // Conceptual credentials
+            if (username === 'Ant' && password === 'Aletheia') {
+                setLoggedIn(true);
+                setAuthMessage('');
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('main-app-content').style.display = 'flex';
+                // Initialize Tower view by default
+                switchView('tower');
+                initAudioContext();
+            } else {
+                setAuthMessage('Access Denied. Intentional intuition required.');
+            }
+        };
+
+        // --- View Switching Logic ---
+        const switchView = (viewName) => {
+            // Hide all canvases and content sections
+            document.querySelectorAll('.app-canvas').forEach(canvasDiv => canvasDiv.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+
+            // Dispose Three.js/Cesium resources for inactive views
+            if (activeRenderLoop === 'tower' && scene && renderer) { disposeScene(scene, renderer, controls, [buildingGroup]); scene = camera = renderer = controls = buildingGroup = null; }
+            if (activeRenderLoop === 'vortex' && portalScene && portalRenderer) { disposeScene(portalScene, portalRenderer, portalControls, [spinningWoodMesh, portalMesh, vortexParticles, machuPicchuParticlesGroup, cleopatraMesh, handlionMesh, backgroundPlane]); portalScene = portalCamera = portalRenderer = portalControls = spinningWoodMesh = portalMesh = vortexParticles = machuPicchuParticlesGroup = cleopatraMesh = handlionMesh = null; backgroundPlane = null;} // Dispose all objects specific to vortex scene
+            if (activeRenderLoop === 'map' && mapViewer) { mapViewer.destroy(); mapViewer = null; }
+
+            // Set active loop name
+            activeRenderLoop = viewName;
+            
+            // Show new view element
+            const newViewElement = document.getElementById(`view-${viewName}`);
+            if (newViewElement) { newViewElement.classList.add('active'); }
+
+            // Initialize or resume new view's specific render loop/setup
+            if (viewName === 'tower') {
+                setupTowerScene(document.getElementById('towerCanvas')); // Re-init tower scene
+                startRenderLoop('tower');
+                // Ensure camera is positioned correctly for tower after re-init
+                if (camera) camera.position.set(0, FLOOR_Y_POSITIONS[currentFloor] + 15, 25);
+                if (controls) controls.target.set(0, FLOOR_Y_POSITIONS[currentFloor], 0);
+            } else if (viewName === 'vortex') {
+                setupVortexScene(document.getElementById('portalCanvas')); // Re-init vortex scene
+                startRenderLoop('vortex');
+                if (portalCamera) portalCamera.position.set(0,0,10);
+                if (portalControls) portalControls.target.set(0,0,0);
+            } else if (viewName === 'map') {
+                setupGlobalMapView(); // Re-init Cesium viewer
+                // Cesium manages its own render loop, so no specific startRenderLoop needed
+                // We'll set activeRenderLoop to 'map' to prevent other loops from running
+            } else if (viewName === 'repository') {
+                document.getElementById('view-repository').classList.add('active');
+                // Static view, only need to ensure content is simulated/displayed
+                simulatePythonOutput();
+            }
+
+            // Update header messages
+            document.getElementById('app-title').textContent = `The Aletheian Nexus: ${viewName.charAt(0).toUpperCase() + viewName.slice(1)} View`;
+            document.getElementById('app-description').textContent = `Explore the ${viewName} dimension of our integrated reality.`;
+        };
+
+        // --- Common Three.js Scene Setup (for re-use) ---
+        function setupCoreThreeJS(canvasElement, isPortalScene = false) {
+            let currentScene = new THREE.Scene();
+            let currentCamera = new THREE.PerspectiveCamera(75, canvasElement.clientWidth / canvasElement.clientHeight, 0.1, 1000);
+            let currentRenderer = new THREE.WebGLRenderer({ canvas: canvasElement, antialias: true });
+            currentRenderer.setSize(canvasElement.clientWidth, canvasElement.clientHeight);
+            currentRenderer.setPixelRatio(window.devicePixelRatio);
+
+            let currentControls = new OrbitControls(currentCamera, currentRenderer.domElement);
+            currentControls.enableDamping = true; currentControls.dampingFactor = 0.05;
+            currentControls.enablePan = true; currentControls.enableZoom = true; currentControls.enableRotate = true;
+
+            const ambientLight = new THREE.AmbientLight(0x404040); currentScene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); directionalLight.position.set(5, 10, 5).normalize(); currentScene.add(directionalLight);
+
+            currentScene.background = new THREE.Color(0x0a0a20);
+            
+            // Adjust camera for portal view vs tower view
+            if (isPortalScene) {
+                currentCamera.position.z = 10;
+                currentControls.target.set(0,0,0);
+            } else { // Tower view defaults
+                currentCamera.position.set(0, 15, 25);
+                currentControls.target.set(0, FLOOR_Y_POSITIONS['G'] + FLOOR_HEIGHT * 5, 0);
+            }
+
+            return { scene: currentScene, camera: currentCamera, renderer: currentRenderer, controls: currentControls };
+        }
+        
+        // --- Asset Loading Check (for initial overlay) ---
+        let assetsToLoad = { font: false, video: false };
+        function checkAllAssetsLoaded() {
+            if (window.THREE_FONT_JSON) assetsToLoad.font = true;
+            if (videoLoaded) assetsToLoad.video = true;
+            
+            if (assetsToLoad.font && assetsToLoad.video) {
+                document.getElementById('loading-overlay').style.display = 'none';
+                setPortalMessage("Nexus Ready. Enter your credentials to begin.");
+            } else {
+                document.getElementById('loading-progress').textContent = 
+                    `Loading: 3D Text: ${assetsToLoad.font ? '100%' : '...'} | Video: ${videoLoadProgress}%`;
+            }
+        }
+
+
+        // --- Global Initialization on window load ---
+        window.onload = () => {
+            // Get DOM elements
+            rpmValueDisplay = document.getElementById('rpmValue');
+            sekedValueDisplay = document.getElementById('sekedValue');
+            portalMessageElement = document.getElementById('portal-message-text');
+            aletheianMessageElement = document.getElementById('aletheian-message');
+            vortexStatusElement = document.getElementById('vortex-status');
+            journeyLogElement = document.getElementById('journey-log');
+            codeOutputPre = document.getElementById('code-output');
+
+            // Set initial slider values and their displays
+            document.getElementById('spinningWoodInput').value = spinningWoodRPM;
+            rpmValueDisplay.textContent = spinningWoodRPM;
+            document.getElementById('sekedValueInput').value = sekedValue;
+            sekedValueDisplay.textContent = sekedValue;
+
+            // Add event listeners for sliders
+            document.getElementById('spinningWoodInput').addEventListener('input', (e) => {
+                spinningWoodRPM = parseFloat(e.target.value);
+                rpmValueDisplay.textContent = spinningWoodRPM;
+            });
+            document.getElementById('sekedValueInput').addEventListener('input', (e) => {
+                sekedValue = parseFloat(e.target.value);
+                sekedValueDisplay.textContent = sekedValue;
+            });
+            
+            // Setup lift button handlers (for Tower View)
+            document.querySelectorAll('.floor-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    goToFloor(e.target.dataset.floor);
+                });
+            });
+            document.getElementById('lift-button-right').addEventListener('click', onLiftCallClick);
+            
+            // Set initial active floor button for Tower View
+            document.querySelector(`.floor-button[data-floor="G"]`).classList.add('active');
+
+            // Setup general navigation buttons
+            document.querySelectorAll('[data-view]').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    switchView(e.target.dataset.view);
+                });
+            });
+
+            // Set up login button listener
+            document.getElementById('login-button').addEventListener('click', authenticateAndMountApp);
+
+            // Set up Reset button
+            document.getElementById('reset-button').addEventListener('click', resetApplication);
+
+            // --- Initial asset loading and audio context activation ---
+            // This needs to happen regardless of login, to hide the loading overlay.
+            initAudioContext(); // Initialize audio context
+            
+            // Load font for THREE.TextGeometry (async)
+            const fontLoader = new THREE.FontLoader();
+            fontLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+                window.THREE_FONT_JSON = font; checkAllAssetsLoaded();
+            }, (xhr) => { if(xhr.total > 0) document.getElementById('loading-progress').textContent = `Loading 3D Text: ${Math.round(xhr.loaded / xhr.total * 100)}%`; }, (err) => { console.error('Font load error:', err); window.THREE_FONT_JSON = null; checkAllAssetsLoaded(); setPortalMessage("Warning: 3D Text font failed to load."); });
+
+            // Video element and texture for background (Tower and Portal views)
+            videoElement = document.createElement('video');
+            videoElement.src = VIDEO_URL; videoElement.loop = true; videoElement.muted = true; videoElement.crossOrigin = 'anonymous'; videoElement.preload = 'auto';
+            videoElement.addEventListener('loadeddata', () => { videoLoaded = true; videoElement.play(); checkAllAssetsLoaded(); });
+            videoElement.addEventListener('progress', (e) => { if (e.lengthComputable && e.total > 0) { videoLoadProgress = Math.round((e.loaded / e.total) * 100); document.getElementById('loading-progress').textContent = `Video: ${videoLoadProgress}%`; } else { document.getElementById('loading-progress').textContent = `Video: Loading...`; } }); // More robust progress
+            videoElement.addEventListener('error', (e) => { console.error("Error loading video:", e); videoLoaded = true; checkAllAssetsLoaded(); setPortalMessage("Error loading video. (Check console)"); });
+
+            // Initial simulation output for repository view
+            simulatePythonOutput();
+        };
+
+        // --- Full cleanup on page unload (important for browser performance) ---
+        function disposeScene(s, r, c, meshesToDispose) {
+            if (s && r) {
+                if (r.domElement && r.domElement.parentNode) {
+                    r.domElement.parentNode.removeChild(r.domElement);
+                }
+                r.dispose();
+            }
+            if (s) {
+                s.traverse(obj => {
+                    if (obj.isMesh) {
+                        if (obj.geometry) obj.geometry.dispose();
+                        if (obj.material) {
+                            if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                            else obj.material.dispose();
+                        }
+                    }
+                });
+                while(s.children.length > 0){ s.remove(s.children[0]); }
+            }
+            if (c) c.dispose();
+            
+            // Explicitly dispose specific refs if they are no longer null for some reason
+            if(meshesToDispose) {
+                meshesToDispose.forEach(m => {
+                    if (m) {
+                        if (m.geometry) m.geometry.dispose();
+                        if (m.material) {
+                            if (Array.isArray(m.material)) m.material.forEach(mat => mat.dispose());
+                            else m.material.dispose();
+                        }
+                    }
+                });
+            }
+        }
+
+        window.onbeforeunload = () => {
+            cancelAnimationFrame(animationFrameId);
+            disposeScene(scene, renderer, controls, [buildingGroup, liftMesh, mirrorMeshFront, mirrorMeshBack, backgroundPlane]);
+            disposeScene(portalScene, portalRenderer, portalControls, [spinningWoodMesh, portalMesh, vortexParticles, machuPicchuParticlesGroup, cleopatraMesh, handlionMesh, backgroundPlane]);
+            
+            if (mapViewer) { mapViewer.destroy(); }
+            
+            // Dispose Tone.js synths
+            if (liftSoundAscend) liftSoundAscend.dispose();
+            if (liftSoundDescend) liftSoundDescend.dispose();
+            if (doorOpenSound) doorOpenSound.dispose();
+            if (doorCloseSound) doorCloseSound.dispose();
+            if (wormholeActivateSound) wormholeActivateSound.dispose();
+            if (wormholeAmbianceSound) wormholeAmbianceSound.dispose();
+            if (launchSound) launchSound.dispose();
+            if (reanimateSound) reanimateSound.dispose();
+            if (Tone.context.state !== 'closed') Tone.context.close();
+
+            if (videoElement) {
+                videoElement.pause();
+                videoElement.removeAttribute('src');
+                videoElement.load();
+            }
+        };
+
+    </script>
+</body>
+</html>
